@@ -6,6 +6,9 @@ on:
     - cron: '0 14 * * *'
   workflow_dispatch: # 手動実行用
 
+permissions:
+  contents: write
+
 jobs:
   fetch-stats:
     runs-on: ubuntu-latest
