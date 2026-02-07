@@ -225,6 +225,117 @@ def fetch_follower_count():
     return follower_count
 
 
+def load_dates_cache():
+    """v3 APIの日時キャッシュを読み込む"""
+    cache_path = os.path.join(DATA_DIR, "v3_dates_cache.json")
+    if not os.path.exists(cache_path):
+        return {}
+    try:
+        with open(cache_path, encoding="utf-8") as f:
+            cache = json.load(f)
+        # 旧形式（値が文字列）のキャッシュを新形式に変換
+        migrated = {}
+        for k, v in cache.items():
+            if isinstance(v, str):
+                migrated[k] = {"published_at": v, "created_at": "", "updated_at": "", "fetched_at": ""}
+            else:
+                migrated[k] = v
+        return migrated
+    except (json.JSONDecodeError, OSError):
+        print("⚠ v3_dates_cache.json の読み込みに失敗。キャッシュを再構築します。")
+        return {}
+
+
+def save_dates_cache(cache):
+    """v3 APIの日時キャッシュを保存する"""
+    cache_path = os.path.join(DATA_DIR, "v3_dates_cache.json")
+    with open(cache_path, "w", encoding="utf-8") as f:
+        json.dump(cache, f, ensure_ascii=False, indent=2)
+
+
+def _is_cache_stale(entry, today_str):
+    """キャッシュが7日以上古いか判定"""
+    fetched_at = entry.get("fetched_at", "")
+    if not fetched_at:
+        return True
+    try:
+        fetched = datetime.strptime(fetched_at, "%Y-%m-%d")
+        today = datetime.strptime(today_str, "%Y-%m-%d")
+        return (today - fetched).days >= 7
+    except ValueError:
+        return True
+
+
+def fetch_note_detail(note_key):
+    """v3 APIから記事の日時情報を取得する（エラー時は空辞書を返す）"""
+    url = f"{BASE_URL}/api/v3/notes/{note_key}"
+    req = Request(url)
+    req.add_header("Cookie", NOTE_COOKIE)
+    req.add_header("User-Agent", "note-stats-tracker")
+
+    try:
+        with urlopen(req) as res:
+            body = json.loads(res.read().decode("utf-8"))
+            data = body.get("data", {})
+            published_at = ""
+            for key in ("published_at", "publish_at", "first_published_at"):
+                if data.get(key):
+                    published_at = data[key]
+                    break
+            return {
+                "published_at": published_at,
+                "created_at": data.get("created_at", ""),
+                "updated_at": data.get("updated_at", ""),
+            }
+    except (HTTPError, URLError) as e:
+        print(f"    ⚠ v3 API エラー ({note_key}): {e}")
+        return {"published_at": "", "created_at": "", "updated_at": ""}
+
+
+def _calc_age_days(today_str, published_at):
+    """取得日とpublished_atの差分日数を計算"""
+    if not published_at:
+        return ""
+    try:
+        pub_date = datetime.fromisoformat(published_at).astimezone(JST).date()
+        today_date = datetime.strptime(today_str, "%Y-%m-%d").date()
+        return (today_date - pub_date).days
+    except (ValueError, TypeError):
+        return ""
+
+
+def fetch_note_dates(articles, today_str):
+    """全記事の日時情報を取得する（キャッシュ活用、7日経過で再取得）"""
+    cache = load_dates_cache()
+    fetched = 0
+
+    for note in articles:
+        note_key = note["key"]
+        entry = cache.get(note_key)
+        if entry and not _is_cache_stale(entry, today_str):
+            note["published_at"] = entry["published_at"]
+            note["created_at"] = entry["created_at"]
+            note["updated_at"] = entry["updated_at"]
+        else:
+            dates = fetch_note_detail(note_key)
+            note["published_at"] = dates["published_at"]
+            note["created_at"] = dates["created_at"]
+            note["updated_at"] = dates["updated_at"]
+            cache[note_key] = {**dates, "fetched_at": today_str}
+            fetched += 1
+            if fetched % 10 == 0:
+                print(f"    {fetched}件取得済み...")
+            time.sleep(0.2)
+        note["age_days"] = _calc_age_days(today_str, note["published_at"])
+
+    cached = len(articles) - fetched
+    print(f"  → {len(articles)}記事中 {fetched}件をv3 APIから取得（{cached}件はキャッシュ）")
+
+    os.makedirs(DATA_DIR, exist_ok=True)
+    save_dates_cache(cache)
+    return articles
+
+
 def _remove_rows_by_date(filepath, date_str):
     """CSVファイルから指定日付の行を除去し、残りの行を返す"""
     if not os.path.exists(filepath):
@@ -244,13 +355,14 @@ def _remove_rows_by_date(filepath, date_str):
 def save_articles_csv(today, articles):
     """記事データをCSVに保存（同日データは上書き）"""
     filepath = os.path.join(DATA_DIR, "articles.csv")
-    existing, header = _remove_rows_by_date(filepath, today)
-    if header is None:
-        header = ["date", "note_id", "key", "title", "read_count", "like_count", "comment_count"]
+    new_header = ["date", "note_id", "key", "title", "published_at", "created_at", "updated_at",
+                  "age_days", "read_count", "like_count", "comment_count"]
+    existing, old_header = _remove_rows_by_date(filepath, today)
 
+    # 既存データの列順が異なる場合は新ヘッダで書き直す（既存行は列数が合わない可能性があるので破棄しない）
     with open(filepath, "w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
-        writer.writerow(header)
+        writer.writerow(new_header)
         for row in existing:
             writer.writerow(row)
         for note in articles:
@@ -259,6 +371,10 @@ def save_articles_csv(today, articles):
                 note["id"],
                 note["key"],
                 note["name"],
+                note.get("published_at", ""),
+                note.get("created_at", ""),
+                note.get("updated_at", ""),
+                note.get("age_days", ""),
                 note["read_count"],
                 note["like_count"],
                 note.get("comment_count", 0),
@@ -308,6 +424,10 @@ def main():
     # 記事データ取得
     print("\n📊 記事データ取得中...")
     articles, total_pv, total_like, total_comment = fetch_all_articles()
+
+    # 日時情報取得（v3 API）
+    print("\n📅 日時情報（published_at等）取得中...")
+    articles = fetch_note_dates(articles, today)
 
     # フォロワー数取得
     print("\n👥 フォロワー数取得中...")
