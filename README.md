@@ -4,16 +4,16 @@ noteの記事データを毎日自動で蓄積するツール。
 
 ## 仕組み
 
-- GitHub Actionsが毎日23:50 JST に実行
+- GitHub Actionsが毎日23:00 JST に自動実行（手動実行も可）
 - noteのAPIから全記事のビュー・スキ・コメント + フォロワー数を取得
-- CSVファイルに追記してコミット
+- CSVファイルに保存してコミット（同日に再実行した場合は上書き）
 
 ## データ
 
 | ファイル | 内容 |
 |----------|------|
-| `data/articles.csv` | 記事別の日次スナップショット |
-| `data/daily_summary.csv` | 日次サマリー（総PV, 総スキ, フォロワー数） |
+| `data/articles.csv` | 記事別の日次スナップショット（PV, スキ, コメント） |
+| `data/daily_summary.csv` | 日次サマリー（総PV, 総スキ, 総コメント, フォロワー数） |
 
 ## ディレクトリ構造
 
@@ -51,14 +51,24 @@ note-stats-tracker/
 1. ブラウザでnoteにログイン
 2. DevTools（F12）→ Network タブ
 3. note.com内の任意のリクエストを選択
-4. Request Headers の `Cookie` をコピー
+4. Request Headers の `Cookie` をすべてコピー
 5. リポジトリの Secrets に `NOTE_COOKIE` として登録
 
 ### Cookie更新
 
 - Cookieの有効期限は約3ヶ月
 - 期限10日前からログに警告が出る
-- 期限が切れるとジョブが失敗する → GitHub Appで確認可能
+- 期限が切れるとジョブが失敗する → GitHub Actionsのログで確認可能
+
+## ローカル実行
+
+```bash
+cp .env.example .env
+# .env を編集してCookie等を設定
+python scripts/fetch_stats.py
+```
+
+`.env` はGitHub Actions上では使われず、Secrets/Variablesから環境変数が注入される。
 
 ## 分析（今後）
 
