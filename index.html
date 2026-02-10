@@ -808,7 +808,7 @@ function renderEtaTrend() {
     return;
   }
 
-  const pad = { top: 28, right: 40, bottom: 48, left: 55 };
+  const pad = { top: 28, right: 40, bottom: 58, left: 55 };
   const cw = W - pad.left - pad.right;
   const ch = H - pad.top - pad.bottom;
 
@@ -859,20 +859,21 @@ function renderEtaTrend() {
   });
 
   // X labels
-  ctx.fillStyle = '#555570';
+  const dowLabels = ['日', '月', '火', '水', '木', '金', '土'];
   ctx.font = '11px JetBrains Mono';
   ctx.textAlign = 'center';
   daySlots.forEach((d, i) => {
     const x = pad.left + slotWidth * i + slotWidth / 2;
     const label = d.substring(5); // MM-DD
-    // Show every date but highlight weekends
     const dayOfWeek = new Date(d + 'T00:00:00').getDay();
+    const dowLabel = `(${dowLabels[dayOfWeek]})`;
     if (dayOfWeek === 0 || dayOfWeek === 6) {
       ctx.fillStyle = '#666680';
     } else {
       ctx.fillStyle = '#444460';
     }
-    ctx.fillText(label, x, H - pad.bottom + 18);
+    ctx.fillText(label, x, H - pad.bottom + 16);
+    ctx.fillText(dowLabel, x, H - pad.bottom + 30);
   });
 
   // Average η for color thresholds
