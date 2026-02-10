@@ -1,0 +1,1011 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>note stats dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg-primary: #0a0a0f;
+  --bg-secondary: #12121a;
+  --bg-card: #16161f;
+  --bg-card-hover: #1c1c28;
+  --border: #2a2a3a;
+  --border-subtle: #1e1e2e;
+  --text-primary: #e8e8f0;
+  --text-secondary: #8888a0;
+  --text-muted: #555570;
+  --accent-cyan: #00d4ff;
+  --accent-cyan-dim: #00d4ff33;
+  --accent-pink: #ff3d8e;
+  --accent-pink-dim: #ff3d8e33;
+  --accent-amber: #ffb020;
+  --accent-amber-dim: #ffb02033;
+  --accent-green: #00e676;
+  --accent-green-dim: #00e67633;
+  --accent-purple: #a855f7;
+  --accent-purple-dim: #a855f733;
+  --glow-cyan: 0 0 20px #00d4ff22;
+  --glow-pink: 0 0 20px #ff3d8e22;
+  --font-mono: 'JetBrains Mono', monospace;
+  --font-sans: 'Noto Sans JP', sans-serif;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Subtle grid background */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(var(--border-subtle) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border-subtle) 1px, transparent 1px);
+  background-size: 60px 60px;
+  opacity: 0.3;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.app { position: relative; z-index: 1; }
+
+/* Header */
+.header {
+  padding: 32px 40px 24px;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(180deg, #0e0e16 0%, var(--bg-primary) 100%);
+}
+
+.header-top {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+
+.header h1 {
+  font-family: var(--font-mono);
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--accent-cyan);
+  letter-spacing: -0.5px;
+}
+
+.header h1 span {
+  color: var(--text-muted);
+  font-weight: 300;
+}
+
+.header-meta {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.header-meta .live {
+  color: var(--accent-green);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* KPI Strip */
+.kpi-strip {
+  display: flex;
+  gap: 1px;
+  background: var(--border);
+  margin: 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.kpi-item {
+  flex: 1;
+  background: var(--bg-secondary);
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.kpi-label {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--text-muted);
+}
+
+.kpi-value {
+  font-family: var(--font-mono);
+  font-size: 34px;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1;
+}
+
+.kpi-value.cyan { color: var(--accent-cyan); }
+.kpi-value.pink { color: var(--accent-pink); }
+.kpi-value.amber { color: var(--accent-amber); }
+.kpi-value.green { color: var(--accent-green); }
+.kpi-value.purple { color: var(--accent-purple); }
+
+.kpi-sub {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.kpi-sub .up { color: var(--accent-green); }
+.kpi-sub .down { color: var(--accent-pink); }
+
+/* Main Grid */
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  background: var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.panel {
+  background: var(--bg-primary);
+  padding: 24px;
+  min-height: 400px;
+  display: flex;
+  flex-direction: column;
+}
+
+.panel-full {
+  grid-column: 1 / -1;
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  flex-shrink: 0;
+}
+
+.panel-title {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--text-secondary);
+}
+
+.panel-title::before {
+  content: '▸ ';
+  color: var(--accent-cyan);
+}
+
+.panel-badge {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  padding: 3px 8px;
+  border-radius: 3px;
+  background: var(--accent-cyan-dim);
+  color: var(--accent-cyan);
+  border: 1px solid #00d4ff44;
+}
+
+/* Charts container */
+.chart-container {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Bar chart (horizontal) */
+.bar-chart {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  overflow-y: auto;
+  max-height: 360px;
+  padding-right: 8px;
+}
+
+.bar-chart::-webkit-scrollbar { width: 4px; }
+.bar-chart::-webkit-scrollbar-track { background: var(--bg-secondary); }
+.bar-chart::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+.bar-row {
+  display: grid;
+  grid-template-columns: 1fr 60px;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 0;
+  font-size: 12px;
+  cursor: default;
+  transition: background 0.15s;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.bar-row:hover {
+  background: var(--bg-card);
+}
+
+.bar-label-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.bar-title {
+  font-size: 13px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bar-track {
+  width: 100%;
+  height: 6px;
+  background: var(--bg-card);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+  position: relative;
+}
+
+.bar-fill.cyan { background: linear-gradient(90deg, var(--accent-cyan), #00a8cc); }
+.bar-fill.pink { background: linear-gradient(90deg, var(--accent-pink), #cc2266); }
+.bar-fill.amber { background: linear-gradient(90deg, var(--accent-amber), #cc8800); }
+
+.bar-value {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 600;
+  text-align: right;
+  color: var(--accent-cyan);
+}
+
+/* Scatter plot (canvas) */
+canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* Decay chart */
+.decay-legend {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+.decay-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+}
+
+.decay-legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+/* Summary line chart */
+.summary-legend {
+  display: flex;
+  gap: 20px;
+  margin-top: 8px;
+}
+
+.summary-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.summary-legend-item:hover { opacity: 0.8; }
+
+.summary-legend-line {
+  width: 16px;
+  height: 3px;
+  border-radius: 2px;
+}
+
+/* Tooltip */
+.tooltip {
+  position: fixed;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px 14px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text-primary);
+  pointer-events: none;
+  z-index: 100;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  max-width: 300px;
+  display: none;
+}
+
+.tooltip-title {
+  color: var(--accent-cyan);
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+
+.tooltip-row {
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+/* Footer */
+.footer {
+  padding: 16px 40px;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .grid { grid-template-columns: 1fr; }
+  .kpi-strip { flex-wrap: wrap; }
+  .kpi-item { min-width: 50%; }
+  .header { padding: 20px; }
+  .panel { padding: 16px; }
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.panel { animation: fadeIn 0.4s ease-out both; }
+.panel:nth-child(2) { animation-delay: 0.1s; }
+.panel:nth-child(3) { animation-delay: 0.2s; }
+.panel:nth-child(4) { animation-delay: 0.3s; }
+
+/* No data state */
+.no-data {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <!-- Header -->
+  <header class="header">
+    <div class="header-top">
+      <h1>note-stats <span>dashboard</span></h1>
+    </div>
+    <div class="header-meta">
+      <span class="live">●</span> data updated: <span id="lastUpdate">--</span>
+      &nbsp;|&nbsp; articles: <span id="articleCount">--</span>
+      &nbsp;|&nbsp; tracking since: <span id="trackingSince">--</span>
+    </div>
+  </header>
+
+  <!-- KPI Strip -->
+  <div class="kpi-strip">
+    <div class="kpi-item">
+      <div class="kpi-label">Total PV</div>
+      <div class="kpi-value cyan" id="kpiPV">--</div>
+      <div class="kpi-sub" id="kpiPVsub"></div>
+    </div>
+    <div class="kpi-item">
+      <div class="kpi-label">Total Likes</div>
+      <div class="kpi-value pink" id="kpiLikes">--</div>
+      <div class="kpi-sub" id="kpiLikesSub"></div>
+    </div>
+    <div class="kpi-item">
+      <div class="kpi-label">Like Rate (η)</div>
+      <div class="kpi-value amber" id="kpiEta">--</div>
+      <div class="kpi-sub" id="kpiEtaSub"></div>
+    </div>
+    <div class="kpi-item">
+      <div class="kpi-label">Articles</div>
+      <div class="kpi-value green" id="kpiArticles">--</div>
+      <div class="kpi-sub" id="kpiArticlesSub"></div>
+    </div>
+    <div class="kpi-item">
+      <div class="kpi-label">Comments</div>
+      <div class="kpi-value purple" id="kpiComments">--</div>
+      <div class="kpi-sub" id="kpiCommentsSub"></div>
+    </div>
+  </div>
+
+  <!-- Charts Grid -->
+  <div class="grid">
+    <!-- 1. Like Rate Ranking -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">スキ率ランキング</div>
+        <div class="panel-badge" id="rankingBadge">TOP 20</div>
+      </div>
+      <div class="chart-container">
+        <div class="bar-chart" id="rankingChart">
+          <div class="no-data">CSVデータを読み込んでください</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. PV vs Likes Scatter -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">PV × スキ 散布図</div>
+        <div class="panel-badge">相関分析</div>
+      </div>
+      <div class="chart-container">
+        <canvas id="scatterCanvas"></canvas>
+      </div>
+    </div>
+
+    <!-- 3. Recent Articles η Trend (full width) -->
+    <div class="panel panel-full">
+      <div class="panel-header">
+        <div class="panel-title">直近2週間 スキ率推移</div>
+        <div class="panel-badge" id="etaTrendBadge">--</div>
+      </div>
+      <div class="chart-container">
+        <canvas id="etaTrendCanvas"></canvas>
+      </div>
+      <div class="decay-legend" id="etaTrendLegend"></div>
+    </div>
+  </div>
+
+  <footer class="footer">
+    note-stats-dashboard v0.1 — data stays in your browser
+  </footer>
+</div>
+
+<!-- Tooltip -->
+<div class="tooltip" id="tooltip">
+  <div class="tooltip-title" id="tooltipTitle"></div>
+  <div class="tooltip-row" id="tooltipBody"></div>
+</div>
+
+<script>
+// ===== State =====
+let articlesData = [];
+let dailySummary = [];
+let latestSnapshot = [];
+
+// ===== CSV Parser =====
+function parseCSV(text) {
+  const lines = text.trim().replace(/\r/g, '').split('\n');
+  if (lines.length < 2) return [];
+  const headers = lines[0].split(',');
+  return lines.slice(1).map(line => {
+    const vals = [];
+    let current = '';
+    let inQuotes = false;
+    for (const ch of line) {
+      if (ch === '"') { inQuotes = !inQuotes; }
+      else if (ch === ',' && !inQuotes) { vals.push(current); current = ''; }
+      else { current += ch; }
+    }
+    vals.push(current);
+    const obj = {};
+    headers.forEach((h, i) => obj[h.trim()] = (vals[i] || '').trim());
+    return obj;
+  });
+}
+
+// ===== Data Processing =====
+function processData(rows) {
+  articlesData = rows.map(r => ({
+    date: r.date,
+    note_id: r.note_id,
+    key: r.key,
+    title: r.title || '',
+    published_at: r.published_at || '',
+    age_days: parseInt(r.age_days) || 0,
+    read_count: parseInt(r.read_count) || 0,
+    like_count: parseInt(r.like_count) || 0,
+    comment_count: parseInt(r.comment_count) || 0,
+  }));
+
+  // Get unique dates sorted
+  const dates = [...new Set(articlesData.map(a => a.date))].sort();
+
+  // Latest snapshot (most recent date)
+  const latestDate = dates[dates.length - 1];
+  latestSnapshot = articlesData.filter(a => a.date === latestDate);
+
+  // Daily summary from each date
+  dailySummary = dates.map(d => {
+    const dayArticles = articlesData.filter(a => a.date === d);
+    const totalPV = dayArticles.reduce((s, a) => s + a.read_count, 0);
+    const totalLikes = dayArticles.reduce((s, a) => s + a.like_count, 0);
+    const totalComments = dayArticles.reduce((s, a) => s + a.comment_count, 0);
+    return { date: d, totalPV, totalLikes, totalComments, articleCount: dayArticles.length };
+  });
+
+  updateKPI();
+  renderRanking();
+  renderScatter();
+  renderEtaTrend();
+  updateHeader(dates);
+}
+
+// ===== KPI =====
+function updateKPI() {
+  const latest = dailySummary[dailySummary.length - 1];
+  const prev = dailySummary.length > 1 ? dailySummary[dailySummary.length - 2] : null;
+
+  document.getElementById('kpiPV').textContent = latest.totalPV.toLocaleString();
+  document.getElementById('kpiLikes').textContent = latest.totalLikes.toLocaleString();
+  document.getElementById('kpiArticles').textContent = latest.articleCount;
+  document.getElementById('kpiComments').textContent = latest.totalComments.toLocaleString();
+
+  const eta = latest.totalPV > 0 ? (latest.totalLikes / latest.totalPV * 100) : 0;
+  document.getElementById('kpiEta').textContent = eta.toFixed(1) + '%';
+
+  if (prev) {
+    const pvDiff = latest.totalPV - prev.totalPV;
+    const likeDiff = latest.totalLikes - prev.totalLikes;
+    const etaPrev = prev.totalPV > 0 ? (prev.totalLikes / prev.totalPV * 100) : 0;
+    const etaDiff = eta - etaPrev;
+
+    document.getElementById('kpiPVsub').innerHTML = diffLabel(pvDiff, 'PV/day');
+    document.getElementById('kpiLikesSub').innerHTML = diffLabel(likeDiff, 'likes/day');
+    document.getElementById('kpiEtaSub').innerHTML = diffLabel(etaDiff, 'pts', true);
+    document.getElementById('kpiArticlesSub').innerHTML =
+      `<span class="up">+${latest.articleCount - prev.articleCount}</span> new`;
+    const commentDiff = latest.totalComments - prev.totalComments;
+    document.getElementById('kpiCommentsSub').innerHTML = diffLabel(commentDiff, '/day');
+  }
+}
+
+function diffLabel(diff, unit, isFloat) {
+  const sign = diff >= 0 ? '+' : '';
+  const cls = diff >= 0 ? 'up' : 'down';
+  const val = isFloat ? diff.toFixed(2) : diff;
+  return `<span class="${cls}">${sign}${val}</span> ${unit}`;
+}
+
+function updateHeader(dates) {
+  document.getElementById('lastUpdate').textContent = dates[dates.length - 1];
+  document.getElementById('articleCount').textContent = latestSnapshot.length;
+  document.getElementById('trackingSince').textContent = dates[0];
+}
+
+// ===== 1. Ranking =====
+function renderRanking() {
+  const container = document.getElementById('rankingChart');
+  const sorted = [...latestSnapshot]
+    .map(a => ({ ...a, eta: a.read_count > 0 ? (a.like_count / a.read_count * 100) : 0 }))
+    .sort((a, b) => b.eta - a.eta);
+
+  const top = sorted.slice(0, 20);
+  const maxEta = Math.max(...top.map(a => a.eta), 1);
+
+  container.innerHTML = top.map((a, i) => {
+    const pct = (a.eta / maxEta * 100).toFixed(1);
+    const colorClass = i < 3 ? 'cyan' : i < 10 ? 'amber' : 'pink';
+    const shortTitle = a.title.replace(/^【.*?】/, '').replace(/\|.*$/, '').trim();
+    return `
+      <div class="bar-row" onmouseenter="showTooltip(event, '${escHtml(a.title)}', 'PV: ${a.read_count} / スキ: ${a.like_count} / η: ${a.eta.toFixed(1)}%')" onmouseleave="hideTooltip()">
+        <div class="bar-label-wrap">
+          <div class="bar-title">${shortTitle || a.key}</div>
+          <div class="bar-track"><div class="bar-fill ${colorClass}" style="width:${pct}%"></div></div>
+        </div>
+        <div class="bar-value">${a.eta.toFixed(1)}%</div>
+      </div>`;
+  }).join('');
+
+  document.getElementById('rankingBadge').textContent = `TOP ${top.length}`;
+}
+
+// ===== 2. Scatter =====
+function renderScatter() {
+  const canvas = document.getElementById('scatterCanvas');
+  const ctx = canvas.getContext('2d');
+  const rect = canvas.parentElement.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  ctx.scale(dpr, dpr);
+  const W = rect.width, H = rect.height;
+
+  ctx.clearRect(0, 0, W, H);
+
+  if (latestSnapshot.length === 0) return;
+
+  const pad = { top: 20, right: 20, bottom: 40, left: 50 };
+  const cw = W - pad.left - pad.right;
+  const ch = H - pad.top - pad.bottom;
+
+  const maxPV = Math.max(...latestSnapshot.map(a => a.read_count), 1);
+  const maxLike = Math.max(...latestSnapshot.map(a => a.like_count), 1);
+
+  // Grid lines
+  ctx.strokeStyle = '#1e1e2e';
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) {
+    const y = pad.top + (ch / 4) * i;
+    ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(W - pad.right, y); ctx.stroke();
+    const x = pad.left + (cw / 4) * i;
+    ctx.beginPath(); ctx.moveTo(x, pad.top); ctx.lineTo(x, H - pad.bottom); ctx.stroke();
+  }
+
+  // Average eta line (diagonal)
+  const avgEta = latestSnapshot.reduce((s, a) => s + a.like_count, 0) /
+                 Math.max(latestSnapshot.reduce((s, a) => s + a.read_count, 0), 1);
+  ctx.strokeStyle = '#ffb02044';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([4, 4]);
+  ctx.beginPath();
+  ctx.moveTo(pad.left, pad.top + ch);
+  const diagX = pad.left + cw;
+  const diagY = pad.top + ch - (maxPV * avgEta / maxLike) * ch;
+  ctx.lineTo(diagX, Math.max(diagY, pad.top));
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Avg eta label
+  ctx.fillStyle = '#ffb02088';
+  ctx.font = '12px JetBrains Mono';
+  ctx.fillText(`avg η=${(avgEta * 100).toFixed(1)}%`, diagX - 80, Math.max(diagY, pad.top) - 4);
+
+  // Points
+  const points = latestSnapshot.map(a => {
+    const x = pad.left + (a.read_count / maxPV) * cw;
+    const y = pad.top + ch - (a.like_count / maxLike) * ch;
+    const eta = a.read_count > 0 ? a.like_count / a.read_count : 0;
+    return { x, y, eta, ...a };
+  });
+
+  points.forEach(p => {
+    const isHigh = p.eta > avgEta * 1.5;
+    const isLow = p.eta < avgEta * 0.5 && p.read_count > maxPV * 0.2;
+    let color = '#00d4ff';
+    let radius = 4;
+    if (isHigh) { color = '#00e676'; radius = 6; }
+    if (isLow) { color = '#ff3d8e'; radius = 6; }
+
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
+    ctx.fillStyle = color + '88';
+    ctx.fill();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    if (isHigh || isLow) {
+      ctx.fillStyle = color;
+      ctx.font = '11px JetBrains Mono';
+      const label = p.title.replace(/^【.*?】/, '').replace(/\|.*$/, '').substring(0, 15);
+      ctx.fillText(label, p.x + 8, p.y - 4);
+    }
+  });
+
+  // Axes labels
+  ctx.fillStyle = '#555570';
+  ctx.font = '12px JetBrains Mono';
+  ctx.textAlign = 'center';
+  ctx.fillText('PV →', W / 2, H - 8);
+  ctx.save();
+  ctx.translate(12, H / 2);
+  ctx.rotate(-Math.PI / 2);
+  ctx.fillText('スキ →', 0, 0);
+  ctx.restore();
+  ctx.textAlign = 'start';
+
+  // Axis numbers
+  ctx.fillStyle = '#555570';
+  ctx.font = '11px JetBrains Mono';
+  ctx.textAlign = 'right';
+  for (let i = 0; i <= 4; i++) {
+    const val = Math.round(maxLike / 4 * (4 - i));
+    ctx.fillText(val, pad.left - 6, pad.top + (ch / 4) * i + 4);
+  }
+  ctx.textAlign = 'center';
+  for (let i = 0; i <= 4; i++) {
+    const val = Math.round(maxPV / 4 * i);
+    ctx.fillText(val, pad.left + (cw / 4) * i, H - pad.bottom + 16);
+  }
+
+  // Canvas tooltip
+  canvas.onmousemove = (e) => {
+    const r = canvas.getBoundingClientRect();
+    const mx = e.clientX - r.left, my = e.clientY - r.top;
+    let found = null;
+    for (const p of points) {
+      if (Math.hypot(p.x - mx, p.y - my) < 10) { found = p; break; }
+    }
+    if (found) {
+      showTooltip(e, found.title, `PV: ${found.read_count} / スキ: ${found.like_count} / η: ${(found.eta * 100).toFixed(1)}%`);
+    } else {
+      hideTooltip();
+    }
+  };
+  canvas.onmouseleave = hideTooltip;
+}
+
+// ===== 3. Recent Articles η Dot Plot =====
+function renderEtaTrend() {
+  const canvas = document.getElementById('etaTrendCanvas');
+  const ctx = canvas.getContext('2d');
+  const rect = canvas.parentElement.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  ctx.scale(dpr, dpr);
+  const W = rect.width, H = rect.height;
+  ctx.clearRect(0, 0, W, H);
+
+  const dates = [...new Set(articlesData.map(a => a.date))].sort();
+  const latestDate = dates[dates.length - 1];
+
+  // Build 14-day range ending at latestDate
+  const endDate = new Date(latestDate + 'T00:00:00');
+  const daySlots = [];
+  for (let i = 13; i >= 0; i--) {
+    const d = new Date(endDate);
+    d.setDate(d.getDate() - i);
+    const iso = d.toISOString().substring(0, 10);
+    daySlots.push(iso);
+  }
+
+  // Find articles published within this 14-day range, using latest snapshot eta
+  const recentArticles = latestSnapshot
+    .filter(a => {
+      if (!a.published_at) return false;
+      const pubDay = a.published_at.substring(0, 10);
+      return pubDay >= daySlots[0] && pubDay <= daySlots[daySlots.length - 1];
+    })
+    .map(a => ({
+      ...a,
+      pubDay: a.published_at.substring(0, 10),
+      eta: a.read_count > 0 ? (a.like_count / a.read_count * 100) : 0,
+    }));
+
+  if (recentArticles.length === 0) {
+    ctx.fillStyle = '#555570';
+    ctx.font = '15px JetBrains Mono';
+    ctx.textAlign = 'center';
+    ctx.fillText('直近2週間に投稿された記事がありません', W / 2, H / 2);
+    document.getElementById('etaTrendLegend').innerHTML = '';
+    document.getElementById('etaTrendBadge').textContent = '0 articles';
+    return;
+  }
+
+  const pad = { top: 28, right: 40, bottom: 48, left: 55 };
+  const cw = W - pad.left - pad.right;
+  const ch = H - pad.top - pad.bottom;
+
+  // Y scale
+  const maxEta = Math.ceil(Math.max(...recentArticles.map(a => a.eta), 10) / 5) * 5;
+
+  // Grid
+  const gridSteps = 5;
+  for (let i = 0; i <= gridSteps; i++) {
+    const y = pad.top + (ch / gridSteps) * i;
+    ctx.strokeStyle = '#1e1e2e';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(W - pad.right, y); ctx.stroke();
+
+    const val = (maxEta / gridSteps * (gridSteps - i)).toFixed(0);
+    ctx.fillStyle = '#555570';
+    ctx.font = '11px JetBrains Mono';
+    ctx.textAlign = 'right';
+    ctx.fillText(val + '%', pad.left - 8, y + 3);
+  }
+
+  // Average η line
+  const avgEta = latestSnapshot.reduce((s, a) => s + a.like_count, 0) /
+                 Math.max(latestSnapshot.reduce((s, a) => s + a.read_count, 0), 1) * 100;
+  const avgY = pad.top + ch - (avgEta / maxEta) * ch;
+  ctx.strokeStyle = '#ffb02044';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([6, 4]);
+  ctx.beginPath();
+  ctx.moveTo(pad.left, avgY);
+  ctx.lineTo(W - pad.right, avgY);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = '#ffb02077';
+  ctx.font = '11px JetBrains Mono';
+  ctx.textAlign = 'left';
+  ctx.fillText(`全体平均 η=${avgEta.toFixed(1)}%`, pad.left + 4, avgY - 6);
+
+  // X axis - 14 day slots
+  const slotWidth = cw / daySlots.length;
+
+  // Vertical slot separators (subtle)
+  daySlots.forEach((d, i) => {
+    const x = pad.left + slotWidth * i + slotWidth / 2;
+    ctx.strokeStyle = '#1a1a28';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(x, pad.top); ctx.lineTo(x, pad.top + ch); ctx.stroke();
+  });
+
+  // X labels
+  ctx.fillStyle = '#555570';
+  ctx.font = '11px JetBrains Mono';
+  ctx.textAlign = 'center';
+  daySlots.forEach((d, i) => {
+    const x = pad.left + slotWidth * i + slotWidth / 2;
+    const label = d.substring(5); // MM-DD
+    // Show every date but highlight weekends
+    const dayOfWeek = new Date(d + 'T00:00:00').getDay();
+    if (dayOfWeek === 0 || dayOfWeek === 6) {
+      ctx.fillStyle = '#666680';
+    } else {
+      ctx.fillStyle = '#444460';
+    }
+    ctx.fillText(label, x, H - pad.bottom + 18);
+  });
+
+  // Average η for color thresholds
+  const avgEtaForColor = latestSnapshot.reduce((s, a) => s + a.like_count, 0) /
+                 Math.max(latestSnapshot.reduce((s, a) => s + a.read_count, 0), 1) * 100;
+
+  // Plot dots
+  const plotPoints = [];
+  // Group articles by pubDay to handle same-day offsets
+  const byDay = {};
+  recentArticles.forEach(a => {
+    if (!byDay[a.pubDay]) byDay[a.pubDay] = [];
+    byDay[a.pubDay].push(a);
+  });
+
+  Object.entries(byDay).forEach(([day, articles]) => {
+    const slotIdx = daySlots.indexOf(day);
+    if (slotIdx === -1) return;
+    const cx = pad.left + slotWidth * slotIdx + slotWidth / 2;
+
+    articles.forEach((a, j) => {
+      const cy = pad.top + ch - (a.eta / maxEta) * ch;
+      // Offset horizontally if multiple on same day
+      const offset = articles.length > 1 ? (j - (articles.length - 1) / 2) * 14 : 0;
+      const px = cx + offset;
+
+      // 3-color based on eta vs average (matching scatter plot)
+      let color;
+      if (a.eta > avgEtaForColor * 1.5) {
+        color = '#00e676'; // green - high performer
+      } else if (a.eta < avgEtaForColor * 0.5) {
+        color = '#ff3d8e'; // pink - underperformer
+      } else {
+        color = '#00d4ff'; // cyan - average
+      }
+
+      // Glow
+      ctx.beginPath();
+      ctx.arc(px, cy, 10, 0, Math.PI * 2);
+      ctx.fillStyle = color + '15';
+      ctx.fill();
+
+      // Dot
+      ctx.beginPath();
+      ctx.arc(px, cy, 6, 0, Math.PI * 2);
+      ctx.fillStyle = color + 'cc';
+      ctx.fill();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // η label above dot
+      ctx.fillStyle = color;
+      ctx.font = '12px JetBrains Mono';
+      ctx.textAlign = 'center';
+      ctx.fillText(a.eta.toFixed(1) + '%', px, cy - 12);
+
+      plotPoints.push({ x: px, y: cy, color, ...a });
+    });
+  });
+
+  document.getElementById('etaTrendBadge').textContent = `${recentArticles.length} articles`;
+
+  // Legend - 3 color explanation
+  const legend = document.getElementById('etaTrendLegend');
+  legend.innerHTML = `
+    <div class="decay-legend-item"><div class="decay-legend-dot" style="background:#00e676"></div>η高（平均×1.5以上）</div>
+    <div class="decay-legend-item"><div class="decay-legend-dot" style="background:#00d4ff"></div>η平均付近</div>
+    <div class="decay-legend-item"><div class="decay-legend-dot" style="background:#ff3d8e"></div>η低（平均×0.5以下）</div>
+    <div class="decay-legend-item" style="margin-left:12px;color:#ffb02077">--- 全体平均 η=${avgEtaForColor.toFixed(1)}%</div>
+  `;
+
+  // Tooltip
+  canvas.onmousemove = (e) => {
+    const r = canvas.getBoundingClientRect();
+    const mx = e.clientX - r.left, my = e.clientY - r.top;
+    let found = null;
+    for (const p of plotPoints) {
+      if (Math.hypot(p.x - mx, p.y - my) < 12) { found = p; break; }
+    }
+    if (found) {
+      showTooltip(e, found.title, `投稿: ${found.pubDay} / PV: ${found.read_count} / スキ: ${found.like_count} / η: ${found.eta.toFixed(1)}%`);
+    } else {
+      hideTooltip();
+    }
+  };
+  canvas.onmouseleave = hideTooltip;
+}
+
+// ===== Tooltip =====
+function showTooltip(e, title, body) {
+  const tt = document.getElementById('tooltip');
+  document.getElementById('tooltipTitle').textContent = title;
+  document.getElementById('tooltipBody').textContent = body;
+  tt.style.display = 'block';
+  tt.style.left = (e.clientX + 14) + 'px';
+  tt.style.top = (e.clientY - 10) + 'px';
+}
+
+function hideTooltip() {
+  document.getElementById('tooltip').style.display = 'none';
+}
+
+function escHtml(s) {
+  return s.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+}
+
+// ===== Load from repo (GitHub Pages) =====
+async function loadFromRepo() {
+  try {
+    const res = await fetch('./data/articles.csv');
+    if (res.ok) {
+      const text = await res.text();
+      const rows = parseCSV(text);
+      if (rows.length > 0) {
+        processData(rows);
+        return true;
+      }
+    }
+  } catch (e) {}
+  return false;
+}
+
+// ===== Init =====
+window.addEventListener('resize', () => {
+  if (latestSnapshot.length > 0) {
+    renderScatter();
+    renderEtaTrend();
+  }
+});
+
+// Try to load from repo on init
+loadFromRepo();
+</script>
+</body>
+</html>
