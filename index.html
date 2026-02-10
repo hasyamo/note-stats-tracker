@@ -425,6 +425,7 @@ canvas {
   .kpi-item { min-width: 50%; }
   .header { padding: 20px; }
   .panel { padding: 16px; }
+  .commentary-strip { padding: 12px 20px; flex-wrap: wrap; gap: 8px; }
 }
 
 /* Animations */
@@ -437,6 +438,47 @@ canvas {
 .panel:nth-child(2) { animation-delay: 0.1s; }
 .panel:nth-child(3) { animation-delay: 0.2s; }
 .panel:nth-child(4) { animation-delay: 0.3s; }
+
+/* Commentary strip */
+.commentary-strip {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 40px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+  font-family: var(--font-mono);
+}
+
+.commentary-label {
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  letter-spacing: 0.5px;
+}
+
+.commentary-text {
+  font-size: 14px;
+  color: var(--text-primary);
+  flex: 1;
+}
+
+.commentary-copy {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--accent-cyan);
+  background: none;
+  border: 1px solid var(--accent-cyan-dim);
+  padding: 4px 14px;
+  border-radius: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s;
+}
+
+.commentary-copy:hover {
+  background: var(--accent-cyan-dim);
+}
 
 /* No data state */
 .no-data {
@@ -511,6 +553,13 @@ canvas {
       <span class="kpi-sub-value" id="kpiComments">--</span>
       <span class="kpi-sub-diff" id="kpiCommentsSub"></span>
     </div>
+  </div>
+
+  <!-- 状態メモ（自動生成） -->
+  <div class="commentary-strip" id="commentaryStrip" style="display:none;">
+    <div class="commentary-label">📝 今日の状態メモ（自動生成）</div>
+    <div class="commentary-text" id="commentaryText"></div>
+    <button class="commentary-copy" id="commentaryCopy" onclick="copyCommentary()">Copy</button>
   </div>
 
   <!-- Charts Grid -->
@@ -622,6 +671,7 @@ function processData(rows) {
   });
 
   updateKPI();
+  updateCommentary();
   renderRanking();
   renderScatter();
   renderEtaTrend();
@@ -696,6 +746,84 @@ function diffBadge(diff) {
   const sign = diff >= 0 ? '+' : '';
   const cls = diff >= 0 ? 'up' : 'down';
   return `<span class="${cls}">${sign}${diff}</span>`;
+}
+
+// ===== Commentary Auto-generation =====
+function updateCommentary() {
+  const src = summaryData.length > 0 ? summaryData : dailySummary;
+  if (src.length < 2) {
+    document.getElementById('commentaryStrip').style.display = 'none';
+    return;
+  }
+
+  const latest = src[src.length - 1];
+  const prev = src[src.length - 2];
+
+  const articleCount = latest.articleCount || latestSnapshot.length;
+  const prevArticleCount = prev.articleCount || articleCount;
+
+  const reach = articleCount > 0 ? (latest.totalPV / articleCount) : 0;
+  const action = articleCount > 0 ? (latest.totalLikes / articleCount) : 0;
+  const eta = latest.totalPV > 0 ? (latest.totalLikes / latest.totalPV * 100) : 0;
+
+  const prevReach = prevArticleCount > 0 ? (prev.totalPV / prevArticleCount) : 0;
+  const prevAction = prevArticleCount > 0 ? (prev.totalLikes / prevArticleCount) : 0;
+  const prevEta = prev.totalPV > 0 ? (prev.totalLikes / prev.totalPV * 100) : 0;
+
+  const dir = (diff) => diff > 0.001 ? '↑' : (diff < -0.001 ? '↓' : '→');
+
+  const rDir = dir(reach - prevReach);
+  const aDir = dir(action - prevAction);
+  const eDir = dir(eta - prevEta);
+  const key = rDir + aDir + eDir;
+
+  const templates = {
+    '↑↑↑': '全指標上昇。好調日。',
+    '↑↑→': 'リーチ・アクション共に上昇。スキ率は安定。',
+    '↑↑↓': '露出もアクションも増加。ただしスキ率は低下、新規流入が多い可能性。',
+    '↑→↑': 'リーチ拡大＋スキ率上昇。読者の質が良い流入。',
+    '↑→→': 'リーチ微増。全体的には安定推移。',
+    '↑→↓': 'リーチは伸びたがスキ率低下。タイトル勝ちの可能性。',
+    '↑↓↑': '露出は増えたがアクション減。スキ率は改善、固定層が反応か。',
+    '↑↓→': '露出増、アクション減。新規の反応が薄い可能性。',
+    '↑↓↓': '露出は増えたが刺さってない。タイトル勝ちの可能性。',
+    '→↑↑': 'リーチ横ばいでアクション・スキ率上昇。内容の質が高い。',
+    '→↑→': 'アクション微増。安定した運営日。',
+    '→↑↓': 'アクション増だがスキ率低下。PV増がアクション増を上回っている。',
+    '→→↑': 'スキ率だけ微増。読者の質がじわり向上。',
+    '→→→': '安定推移。現状維持。',
+    '→→↓': 'スキ率だけ微減。大きな変化はなし。',
+    '→↓↑': 'アクション減だがスキ率は上昇。PV減でスキ率が相対的に上昇か。',
+    '→↓→': 'アクション微減。経過観察。',
+    '→↓↓': 'アクション・スキ率共に低下。テーマか投稿タイミングを確認。',
+    '↓↑↑': 'リーチ減でもアクション・スキ率は上昇。固定読者の反応が濃い日。',
+    '↓↑→': 'リーチ減だがアクション増。少数だが刺さっている。',
+    '↓↑↓': 'リーチ減、アクション増、スキ率低下。変動大きめ、翌日も観察。',
+    '↓→↑': '閑散日だが質は高い。固定読者が反応。',
+    '↓→→': 'リーチ微減。大きな変化なし。',
+    '↓→↓': 'リーチ・スキ率共に微減。緩やかな下降傾向。',
+    '↓↓↑': 'リーチ・アクション共に減少だがスキ率は上昇。PV減による相対効果の可能性。',
+    '↓↓→': 'リーチ・アクション減。投稿のない日 or テーマが合わなかった可能性。',
+    '↓↓↓': '全指標下降。一時的な落ち込みか、テーマ・タイミングの見直しを。',
+  };
+
+  const comment = templates[key] || '判定不能。データを確認。';
+  const dateStr = latest.date || '';
+  const displayComment = `${dateStr} | リーチ${rDir} アクション${aDir} スキ率${eDir} | ${comment}`;
+  const copyComment = `リーチ${rDir} アクション${aDir} スキ率${eDir} | ${comment}`;
+
+  document.getElementById('commentaryText').textContent = displayComment;
+  document.getElementById('commentaryText').dataset.copyText = copyComment;
+  document.getElementById('commentaryStrip').style.display = 'flex';
+}
+
+function copyCommentary() {
+  const text = document.getElementById('commentaryText').dataset.copyText;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('commentaryCopy');
+    btn.textContent = 'Copied!';
+    setTimeout(() => { btn.textContent = 'Copy'; }, 1500);
+  });
 }
 
 function updateHeader(dates) {
