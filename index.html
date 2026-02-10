@@ -149,6 +149,49 @@ body::before {
 
 .kpi-sub .up { color: var(--accent-green); }
 .kpi-sub .down { color: var(--accent-pink); }
+.kpi-sub .flat { color: var(--text-muted); }
+
+.kpi-sub .arrow {
+  font-size: 16px;
+  margin-right: 2px;
+}
+
+/* Detail KPI sub strip */
+.kpi-strip-sub {
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+}
+
+.kpi-item-sub {
+  flex: 1;
+  background: var(--bg-secondary);
+  padding: 10px 24px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-mono);
+}
+
+.kpi-sub-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-muted);
+}
+
+.kpi-sub-value {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.kpi-sub-diff {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.kpi-sub-diff .up { color: var(--accent-green); }
+.kpi-sub-diff .down { color: var(--accent-pink); }
 
 /* Main Grid */
 .grid {
@@ -425,29 +468,48 @@ canvas {
   <!-- KPI Strip -->
   <div class="kpi-strip">
     <div class="kpi-item">
-      <div class="kpi-label">Total PV</div>
-      <div class="kpi-value cyan" id="kpiPV">--</div>
-      <div class="kpi-sub" id="kpiPVsub"></div>
+      <div class="kpi-label">リーチ力</div>
+      <div class="kpi-value cyan" id="kpiReach">--</div>
+      <div class="kpi-sub" id="kpiReachSub">PV ÷ 記事数</div>
     </div>
     <div class="kpi-item">
-      <div class="kpi-label">Total Likes</div>
-      <div class="kpi-value pink" id="kpiLikes">--</div>
-      <div class="kpi-sub" id="kpiLikesSub"></div>
+      <div class="kpi-label">アクション力</div>
+      <div class="kpi-value pink" id="kpiAction">--</div>
+      <div class="kpi-sub" id="kpiActionSub">スキ ÷ 記事数</div>
     </div>
     <div class="kpi-item">
-      <div class="kpi-label">Like Rate (η)</div>
+      <div class="kpi-label">スキ率 (η)</div>
       <div class="kpi-value amber" id="kpiEta">--</div>
-      <div class="kpi-sub" id="kpiEtaSub"></div>
+      <div class="kpi-sub" id="kpiEtaSub">スキ ÷ PV</div>
+    </div>
+    <div class="kpi-item">
+      <div class="kpi-label">Followers</div>
+      <div class="kpi-value green" id="kpiFollowers">--</div>
+      <div class="kpi-sub" id="kpiFollowersSub"></div>
     </div>
     <div class="kpi-item">
       <div class="kpi-label">Articles</div>
-      <div class="kpi-value green" id="kpiArticles">--</div>
+      <div class="kpi-value purple" id="kpiArticles">--</div>
       <div class="kpi-sub" id="kpiArticlesSub"></div>
     </div>
-    <div class="kpi-item">
-      <div class="kpi-label">Comments</div>
-      <div class="kpi-value purple" id="kpiComments">--</div>
-      <div class="kpi-sub" id="kpiCommentsSub"></div>
+  </div>
+
+  <!-- Detail KPI (Total PV / Likes / Comments) -->
+  <div class="kpi-strip kpi-strip-sub">
+    <div class="kpi-item-sub">
+      <span class="kpi-sub-label">Total PV</span>
+      <span class="kpi-sub-value" id="kpiPV">--</span>
+      <span class="kpi-sub-diff" id="kpiPVsub"></span>
+    </div>
+    <div class="kpi-item-sub">
+      <span class="kpi-sub-label">Total Likes</span>
+      <span class="kpi-sub-value" id="kpiLikes">--</span>
+      <span class="kpi-sub-diff" id="kpiLikesSub"></span>
+    </div>
+    <div class="kpi-item-sub">
+      <span class="kpi-sub-label">Total Comments</span>
+      <span class="kpi-sub-value" id="kpiComments">--</span>
+      <span class="kpi-sub-diff" id="kpiCommentsSub"></span>
     </div>
   </div>
 
@@ -506,6 +568,7 @@ canvas {
 let articlesData = [];
 let dailySummary = [];
 let latestSnapshot = [];
+let summaryData = []; // from daily_summary.csv
 
 // ===== CSV Parser =====
 function parseCSV(text) {
@@ -567,38 +630,72 @@ function processData(rows) {
 
 // ===== KPI =====
 function updateKPI() {
-  const latest = dailySummary[dailySummary.length - 1];
-  const prev = dailySummary.length > 1 ? dailySummary[dailySummary.length - 2] : null;
+  // Use summaryData if available, otherwise fall back to articles-derived summary
+  const src = summaryData.length > 0 ? summaryData : dailySummary;
+  const latest = src[src.length - 1];
+  const prev = src.length > 1 ? src[src.length - 2] : null;
 
-  document.getElementById('kpiPV').textContent = latest.totalPV.toLocaleString();
-  document.getElementById('kpiLikes').textContent = latest.totalLikes.toLocaleString();
-  document.getElementById('kpiArticles').textContent = latest.articleCount;
-  document.getElementById('kpiComments').textContent = latest.totalComments.toLocaleString();
+  if (!latest) return;
 
-  const eta = latest.totalPV > 0 ? (latest.totalLikes / latest.totalPV * 100) : 0;
+  const articleCount = latest.articleCount || latestSnapshot.length;
+  const totalPV = latest.totalPV;
+  const totalLikes = latest.totalLikes;
+  const totalComments = latest.totalComments;
+  const followers = latest.followerCount || 0;
+
+  // 3KPI (KITAcore style)
+  const reach = articleCount > 0 ? (totalPV / articleCount) : 0;
+  const action = articleCount > 0 ? (totalLikes / articleCount) : 0;
+  const eta = totalPV > 0 ? (totalLikes / totalPV * 100) : 0;
+
+  document.getElementById('kpiReach').textContent = reach.toFixed(1);
+  document.getElementById('kpiAction').textContent = action.toFixed(1);
   document.getElementById('kpiEta').textContent = eta.toFixed(1) + '%';
+  document.getElementById('kpiFollowers').textContent = followers.toLocaleString();
+  document.getElementById('kpiArticles').textContent = articleCount;
+
+  // Detail row
+  document.getElementById('kpiPV').textContent = totalPV.toLocaleString();
+  document.getElementById('kpiLikes').textContent = totalLikes.toLocaleString();
+  document.getElementById('kpiComments').textContent = totalComments.toLocaleString();
 
   if (prev) {
-    const pvDiff = latest.totalPV - prev.totalPV;
-    const likeDiff = latest.totalLikes - prev.totalLikes;
-    const etaPrev = prev.totalPV > 0 ? (prev.totalLikes / prev.totalPV * 100) : 0;
-    const etaDiff = eta - etaPrev;
+    const prevArticleCount = prev.articleCount || articleCount;
+    const prevPV = prev.totalPV;
+    const prevLikes = prev.totalLikes;
+    const prevComments = prev.totalComments;
+    const prevFollowers = prev.followerCount || 0;
 
-    document.getElementById('kpiPVsub').innerHTML = diffLabel(pvDiff, 'PV/day');
-    document.getElementById('kpiLikesSub').innerHTML = diffLabel(likeDiff, 'likes/day');
-    document.getElementById('kpiEtaSub').innerHTML = diffLabel(etaDiff, 'pts', true);
-    document.getElementById('kpiArticlesSub').innerHTML =
-      `<span class="up">+${latest.articleCount - prev.articleCount}</span> new`;
-    const commentDiff = latest.totalComments - prev.totalComments;
-    document.getElementById('kpiCommentsSub').innerHTML = diffLabel(commentDiff, '/day');
+    const prevReach = prevArticleCount > 0 ? (prevPV / prevArticleCount) : 0;
+    const prevAction = prevArticleCount > 0 ? (prevLikes / prevArticleCount) : 0;
+    const prevEta = prevPV > 0 ? (prevLikes / prevPV * 100) : 0;
+
+    document.getElementById('kpiReachSub').innerHTML = arrowLabel(reach - prevReach, '/article');
+    document.getElementById('kpiActionSub').innerHTML = arrowLabel(action - prevAction, '/article');
+    document.getElementById('kpiEtaSub').innerHTML = arrowLabel(eta - prevEta, 'pts', true);
+    document.getElementById('kpiFollowersSub').innerHTML = arrowLabel(followers - prevFollowers, '');
+    document.getElementById('kpiArticlesSub').innerHTML = arrowLabel(articleCount - prevArticleCount, ' new');
+
+    // Detail row diffs
+    document.getElementById('kpiPVsub').innerHTML = diffBadge(totalPV - prevPV);
+    document.getElementById('kpiLikesSub').innerHTML = diffBadge(totalLikes - prevLikes);
+    document.getElementById('kpiCommentsSub').innerHTML = diffBadge(totalComments - prevComments);
   }
 }
 
-function diffLabel(diff, unit, isFloat) {
+function arrowLabel(diff, unit, isFloat) {
+  let arrow, cls;
+  if (diff > 0.001) { arrow = '↑'; cls = 'up'; }
+  else if (diff < -0.001) { arrow = '↓'; cls = 'down'; }
+  else { arrow = '→'; cls = 'flat'; }
+  const val = isFloat ? Math.abs(diff).toFixed(2) : Math.abs(Math.round(diff));
+  return `<span class="${cls}"><span class="arrow">${arrow}</span>${val}${unit}</span>`;
+}
+
+function diffBadge(diff) {
   const sign = diff >= 0 ? '+' : '';
   const cls = diff >= 0 ? 'up' : 'down';
-  const val = isFloat ? diff.toFixed(2) : diff;
-  return `<span class="${cls}">${sign}${val}</span> ${unit}`;
+  return `<span class="${cls}">${sign}${diff}</span>`;
 }
 
 function updateHeader(dates) {
@@ -984,11 +1081,29 @@ function escHtml(s) {
 // ===== Load from repo (GitHub Pages) =====
 async function loadFromRepo() {
   try {
+    // Load articles.csv
     const res = await fetch('./data/articles.csv');
     if (res.ok) {
       const text = await res.text();
       const rows = parseCSV(text);
       if (rows.length > 0) {
+        // Load daily_summary.csv
+        try {
+          const sumRes = await fetch('./data/daily_summary.csv');
+          if (sumRes.ok) {
+            const sumText = await sumRes.text();
+            const sumRows = parseCSV(sumText);
+            summaryData = sumRows.map(r => ({
+              date: r.date,
+              articleCount: parseInt(r.article_count) || 0,
+              totalPV: parseInt(r.total_pv) || 0,
+              totalLikes: parseInt(r.total_like) || 0,
+              totalComments: parseInt(r.total_comment) || 0,
+              followerCount: parseInt(r.follower_count) || 0,
+            })).sort((a, b) => a.date.localeCompare(b.date));
+          }
+        } catch (e) {}
+
         processData(rows);
         return true;
       }
