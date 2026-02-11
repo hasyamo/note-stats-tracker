@@ -480,20 +480,45 @@ canvas {
   background: var(--accent-cyan-dim);
 }
 
-/* Trend filter panel */
-.trend-filter-panel {
+/* Trend panel */
+.trend-panel {
   min-height: auto;
-  padding-bottom: 12px;
+}
+
+.trend-tabs {
+  display: flex;
+  gap: 2px;
+  margin-bottom: 16px;
+}
+
+.trend-tab {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  padding: 6px 18px;
+  background: var(--bg-card);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: 4px 4px 0 0;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.trend-tab:hover { color: var(--text-secondary); }
+.trend-tab.active {
+  background: var(--bg-primary);
+  color: var(--accent-cyan);
+  border-bottom-color: var(--bg-primary);
 }
 
 .trend-filters {
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: 16px;
   flex-wrap: wrap;
   font-family: var(--font-mono);
-  font-size: 13px;
-  color: var(--text-secondary);
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 12px;
 }
 
 .trend-filters label {
@@ -509,9 +534,9 @@ canvas {
   color: var(--text-primary);
   border: 1px solid var(--border);
   border-radius: 4px;
-  padding: 4px 8px;
+  padding: 3px 6px;
   font-family: var(--font-mono);
-  font-size: 13px;
+  font-size: 12px;
   outline: none;
 }
 
@@ -520,15 +545,50 @@ canvas {
   border-color: var(--accent-cyan);
 }
 
-.trend-filters select[multiple] {
-  min-width: 260px;
-  height: 80px;
-  padding: 2px;
+.trend-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow-y: auto;
+  max-height: 600px;
+  padding-right: 4px;
 }
 
-.trend-filters select[multiple] option {
-  padding: 2px 6px;
-  font-size: 12px;
+.trend-rows::-webkit-scrollbar { width: 4px; }
+.trend-rows::-webkit-scrollbar-track { background: var(--bg-secondary); }
+.trend-rows::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+.trend-row {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) 3fr 60px;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 8px;
+  border-radius: 4px;
+  transition: background 0.15s;
+  cursor: default;
+}
+
+.trend-row:hover { background: var(--bg-card); }
+
+.trend-row-title {
+  font-size: 13px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.trend-row-spark {
+  height: 32px;
+}
+
+.trend-row-value {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 600;
+  text-align: right;
+  color: var(--accent-cyan);
 }
 
 /* No data state */
@@ -651,10 +711,15 @@ canvas {
       <div class="decay-legend" id="etaTrendLegend"></div>
     </div>
 
-    <!-- 4. Article Trend Filter -->
-    <div class="panel panel-full trend-filter-panel">
+    <!-- 4. Article Trend (sparkline rows with tabs) -->
+    <div class="panel panel-full trend-panel">
       <div class="panel-header">
         <div class="panel-title">記事別 日次推移</div>
+        <div class="panel-badge" id="trendBadge">--</div>
+      </div>
+      <div class="trend-tabs">
+        <div class="trend-tab active" data-metric="pv_delta">PV</div>
+        <div class="trend-tab" data-metric="like_delta">スキ</div>
       </div>
       <div class="trend-filters">
         <label>投稿日: 直近
@@ -665,37 +730,13 @@ canvas {
             <option value="0">すべて</option>
           </select>
         </label>
-        <label>PV増分 ≥
-          <input id="trendPvMin" type="number" value="0" min="0" style="width:60px">
-        </label>
-        <label>記事選択:
-          <select id="trendArticleSelect" multiple></select>
+        <label>増分 ≥
+          <input id="trendMinDelta" type="number" value="0" min="0" style="width:60px">
         </label>
       </div>
-    </div>
-
-    <!-- 5. PV Daily Trend -->
-    <div class="panel panel-full">
-      <div class="panel-header">
-        <div class="panel-title">記事別 日次PV推移</div>
-        <div class="panel-badge" id="pvTrendBadge">--</div>
+      <div class="trend-rows" id="trendRows">
+        <div class="no-data">データを読み込み中...</div>
       </div>
-      <div class="chart-container">
-        <canvas id="pvTrendCanvas"></canvas>
-      </div>
-      <div class="decay-legend" id="pvTrendLegend"></div>
-    </div>
-
-    <!-- 6. Like Daily Trend -->
-    <div class="panel panel-full">
-      <div class="panel-header">
-        <div class="panel-title">記事別 日次スキ推移</div>
-        <div class="panel-badge" id="likeTrendBadge">--</div>
-      </div>
-      <div class="chart-container">
-        <canvas id="likeTrendCanvas"></canvas>
-      </div>
-      <div class="decay-legend" id="likeTrendLegend"></div>
     </div>
   </div>
 
@@ -1287,16 +1328,11 @@ function renderEtaTrend() {
   canvas.onmouseleave = hideTooltip;
 }
 
-// ===== 4-6. Article Daily Trend =====
-const TREND_COLORS = [
-  '#00d4ff', '#ff3d8e', '#00e676', '#ffb020', '#a855f7',
-  '#ff6b6b', '#48dbfb', '#feca57', '#ff9ff3', '#54a0ff',
-];
-
+// ===== 4. Article Daily Trend (sparkline rows) =====
 let trendDeltaCache = null;
+let trendActiveMetric = 'pv_delta';
 
 function computeDailyDeltas() {
-  // Group by note_id
   const byId = {};
   articlesData.forEach(a => {
     if (!byId[a.note_id]) byId[a.note_id] = [];
@@ -1306,231 +1342,179 @@ function computeDailyDeltas() {
   const allDates = [...new Set(articlesData.map(a => a.date))].sort();
   if (allDates.length < 2) return { dates: [], series: [] };
 
-  const deltaDates = allDates.slice(1); // skip first date (no prev to diff against)
-
+  const deltaDates = allDates.slice(1);
   const series = [];
   Object.entries(byId).forEach(([noteId, rows]) => {
     rows.sort((a, b) => a.date.localeCompare(b.date));
     const deltas = [];
-    let totalPvDelta = 0;
+    let totalPvDelta = 0, totalLikeDelta = 0;
     for (let i = 1; i < rows.length; i++) {
       const pvDelta = Math.max(0, rows[i].read_count - rows[i - 1].read_count);
       const likeDelta = Math.max(0, rows[i].like_count - rows[i - 1].like_count);
       deltas.push({ date: rows[i].date, pv_delta: pvDelta, like_delta: likeDelta });
       totalPvDelta += pvDelta;
+      totalLikeDelta += likeDelta;
     }
     if (deltas.length > 0) {
       series.push({
-        note_id: noteId,
-        title: rows[0].title,
+        note_id: noteId, title: rows[0].title,
         published_at: rows[0].published_at || '',
-        totalPvDelta,
-        deltas,
+        totalPvDelta, totalLikeDelta, deltas,
       });
     }
   });
-
   return { dates: deltaDates, series };
 }
 
-function filterTrendSeries(allData) {
+function filterTrendSeries(allData, metric) {
   const dayFilter = parseInt(document.getElementById('trendDayFilter').value) || 0;
-  const pvMin = parseInt(document.getElementById('trendPvMin').value) || 0;
-  const selectEl = document.getElementById('trendArticleSelect');
-  const selected = [...selectEl.selectedOptions].map(o => o.value);
-
+  const minDelta = parseInt(document.getElementById('trendMinDelta').value) || 0;
   let filtered = allData.series;
 
-  // Filter by selected articles (if any selected)
-  if (selected.length > 0) {
-    filtered = filtered.filter(s => selected.includes(s.note_id));
-  }
-
-  // Filter by publish date recency
   if (dayFilter > 0 && allData.dates.length > 0) {
     const latestDate = allData.dates[allData.dates.length - 1];
     const cutoff = new Date(latestDate + 'T00:00:00');
     cutoff.setDate(cutoff.getDate() - dayFilter);
     const cutoffStr = cutoff.toISOString().substring(0, 10);
-    filtered = filtered.filter(s => {
-      if (!s.published_at) return false;
-      return s.published_at.substring(0, 10) >= cutoffStr;
-    });
+    filtered = filtered.filter(s => s.published_at && s.published_at.substring(0, 10) >= cutoffStr);
   }
 
-  // Filter by min PV delta (total across all dates)
-  if (pvMin > 0) {
-    filtered = filtered.filter(s => s.totalPvDelta >= pvMin);
+  if (minDelta > 0) {
+    const totalKey = metric === 'pv_delta' ? 'totalPvDelta' : 'totalLikeDelta';
+    filtered = filtered.filter(s => s[totalKey] >= minDelta);
   }
 
+  const totalKey = metric === 'pv_delta' ? 'totalPvDelta' : 'totalLikeDelta';
+  filtered.sort((a, b) => b[totalKey] - a[totalKey]);
   return filtered;
 }
 
-function populateArticleSelect(series) {
-  const sel = document.getElementById('trendArticleSelect');
-  sel.innerHTML = '';
-  const sorted = [...series].sort((a, b) => b.totalPvDelta - a.totalPvDelta);
-  sorted.forEach(s => {
-    const opt = document.createElement('option');
-    opt.value = s.note_id;
-    const shortTitle = s.title.length > 30 ? s.title.substring(0, 30) + '...' : s.title;
-    opt.textContent = shortTitle;
-    sel.appendChild(opt);
+function drawSparkline(canvas, deltas, dates, metric, color) {
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const W = canvas.clientWidth;
+  const H = canvas.clientHeight;
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, W, H);
+
+  if (deltas.length === 0) return;
+
+  const pad = 4;
+  const cw = W - pad * 2;
+  const ch = H - pad * 2;
+
+  const vals = dates.map(d => {
+    const found = deltas.find(dd => dd.date === d);
+    return found ? found[metric] : 0;
+  });
+  const maxVal = Math.max(...vals, 1);
+
+  // Fill area
+  ctx.beginPath();
+  ctx.moveTo(pad, pad + ch);
+  vals.forEach((v, i) => {
+    const x = pad + (cw / Math.max(vals.length - 1, 1)) * i;
+    const y = pad + ch - (v / maxVal) * ch;
+    ctx.lineTo(x, y);
+  });
+  ctx.lineTo(pad + cw, pad + ch);
+  ctx.closePath();
+  ctx.fillStyle = color + '18';
+  ctx.fill();
+
+  // Line
+  ctx.beginPath();
+  vals.forEach((v, i) => {
+    const x = pad + (cw / Math.max(vals.length - 1, 1)) * i;
+    const y = pad + ch - (v / maxVal) * ch;
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  });
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Dots
+  vals.forEach((v, i) => {
+    const x = pad + (cw / Math.max(vals.length - 1, 1)) * i;
+    const y = pad + ch - (v / maxVal) * ch;
+    ctx.beginPath();
+    ctx.arc(x, y, 2.5, 0, Math.PI * 2);
+    ctx.fillStyle = color;
+    ctx.fill();
   });
 }
 
-function renderTrendChart(canvasId, legendId, badgeId, metric, dates, series) {
-  const canvas = document.getElementById(canvasId);
-  const ctx = canvas.getContext('2d');
-  const rect = canvas.parentElement.getBoundingClientRect();
-  const dpr = window.devicePixelRatio || 1;
-  canvas.width = rect.width * dpr;
-  canvas.height = rect.height * dpr;
-  ctx.scale(dpr, dpr);
-  const W = rect.width, H = rect.height;
-  ctx.clearRect(0, 0, W, H);
-
-  if (dates.length === 0 || series.length === 0) {
-    ctx.fillStyle = '#555570';
-    ctx.font = '15px JetBrains Mono';
-    ctx.textAlign = 'center';
-    ctx.fillText('表示するデータがありません', W / 2, H / 2);
-    document.getElementById(legendId).innerHTML = '';
-    document.getElementById(badgeId).textContent = '0 articles';
-    canvas.onmousemove = null;
-    canvas.onmouseleave = null;
+function renderTrendRows() {
+  if (!trendDeltaCache || trendDeltaCache.dates.length === 0) {
+    document.getElementById('trendRows').innerHTML = '<div class="no-data">差分データがありません（2日以上のデータが必要）</div>';
+    document.getElementById('trendBadge').textContent = '0 articles';
     return;
   }
 
-  const pad = { top: 20, right: 20, bottom: 50, left: 55 };
-  const cw = W - pad.left - pad.right;
-  const ch = H - pad.top - pad.bottom;
+  const metric = trendActiveMetric;
+  const filtered = filterTrendSeries(trendDeltaCache, metric);
+  const dates = trendDeltaCache.dates;
+  const container = document.getElementById('trendRows');
+  const totalKey = metric === 'pv_delta' ? 'totalPvDelta' : 'totalLikeDelta';
+  const label = metric === 'pv_delta' ? 'PV' : 'スキ';
 
-  // Compute max Y
-  let maxY = 1;
-  series.forEach(s => {
-    s.deltas.forEach(d => {
-      if (d[metric] > maxY) maxY = d[metric];
-    });
-  });
-  maxY = Math.ceil(maxY / 5) * 5 || 5;
-
-  // Grid
-  const gridSteps = 5;
-  for (let i = 0; i <= gridSteps; i++) {
-    const y = pad.top + (ch / gridSteps) * i;
-    ctx.strokeStyle = '#1e1e2e';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(pad.left, y);
-    ctx.lineTo(W - pad.right, y);
-    ctx.stroke();
-
-    const val = Math.round(maxY / gridSteps * (gridSteps - i));
-    ctx.fillStyle = '#555570';
-    ctx.font = '11px JetBrains Mono';
-    ctx.textAlign = 'right';
-    ctx.fillText(val, pad.left - 8, y + 3);
+  if (filtered.length === 0) {
+    container.innerHTML = '<div class="no-data">条件に一致する記事がありません</div>';
+    document.getElementById('trendBadge').textContent = '0 articles';
+    return;
   }
 
-  // X axis
-  const slotWidth = cw / dates.length;
-  const dowLabels = ['日', '月', '火', '水', '木', '金', '土'];
-  ctx.font = '11px JetBrains Mono';
-  ctx.textAlign = 'center';
-  dates.forEach((d, i) => {
-    const x = pad.left + slotWidth * i + slotWidth / 2;
-    const dayOfWeek = new Date(d + 'T00:00:00').getDay();
-    ctx.fillStyle = (dayOfWeek === 0 || dayOfWeek === 6) ? '#666680' : '#444460';
-    ctx.fillText(d.substring(5), x, H - pad.bottom + 16);
-    ctx.fillText(`(${dowLabels[dayOfWeek]})`, x, H - pad.bottom + 30);
-  });
+  document.getElementById('trendBadge').textContent = `${filtered.length} articles`;
 
-  // Plot lines
-  const allPoints = [];
-  series.forEach((s, si) => {
-    const color = TREND_COLORS[si % TREND_COLORS.length];
-    ctx.strokeStyle = color + 'cc';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    let started = false;
-    s.deltas.forEach(d => {
-      const di = dates.indexOf(d.date);
-      if (di === -1) return;
-      const x = pad.left + slotWidth * di + slotWidth / 2;
-      const y = pad.top + ch - (d[metric] / maxY) * ch;
-      if (!started) { ctx.moveTo(x, y); started = true; }
-      else { ctx.lineTo(x, y); }
-      allPoints.push({ x, y, title: s.title, date: d.date, value: d[metric], color });
-    });
-    ctx.stroke();
-
-    // Dots
-    s.deltas.forEach(d => {
-      const di = dates.indexOf(d.date);
-      if (di === -1) return;
-      const x = pad.left + slotWidth * di + slotWidth / 2;
-      const y = pad.top + ch - (d[metric] / maxY) * ch;
-      ctx.beginPath();
-      ctx.arc(x, y, 4, 0, Math.PI * 2);
-      ctx.fillStyle = color + 'cc';
-      ctx.fill();
-      ctx.strokeStyle = color;
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
-    });
-  });
-
-  // Badge
-  document.getElementById(badgeId).textContent = `${series.length} articles`;
-
-  // Legend
-  const legend = document.getElementById(legendId);
-  legend.innerHTML = series.map((s, i) => {
-    const color = TREND_COLORS[i % TREND_COLORS.length];
-    const shortTitle = s.title.length > 30 ? s.title.substring(0, 30) + '...' : s.title;
-    return `<div class="decay-legend-item"><div class="decay-legend-dot" style="background:${color}"></div>${escHtml(shortTitle)}</div>`;
+  container.innerHTML = filtered.map((s, i) => {
+    const shortTitle = s.title.replace(/^【.*?】/, '').replace(/\|.*$/, '').trim();
+    const displayTitle = shortTitle.length > 30 ? shortTitle.substring(0, 30) + '...' : shortTitle;
+    const total = s[totalKey];
+    const color = total > 0 ? 'var(--accent-cyan)' : 'var(--text-muted)';
+    return `
+      <div class="trend-row" data-idx="${i}"
+        onmouseenter="showTooltip(event, '${escHtml(s.title)}', '${label}増分合計: +${total} / 投稿: ${s.published_at ? s.published_at.substring(0,10) : "不明"}')"
+        onmouseleave="hideTooltip()">
+        <div class="trend-row-title">${escHtml(displayTitle)}</div>
+        <canvas class="trend-row-spark" data-series-idx="${i}"></canvas>
+        <div class="trend-row-value" style="color:${color}">+${total}</div>
+      </div>`;
   }).join('');
 
-  // Tooltip
-  canvas.onmousemove = (e) => {
-    const r = canvas.getBoundingClientRect();
-    const mx = e.clientX - r.left, my = e.clientY - r.top;
-    let found = null, minDist = 20;
-    for (const p of allPoints) {
-      const dist = Math.hypot(p.x - mx, p.y - my);
-      if (dist < minDist) { minDist = dist; found = p; }
-    }
-    if (found) {
-      const label = metric === 'pv_delta' ? 'PV増分' : 'スキ増分';
-      showTooltip(e, found.title, `${found.date} / ${label}: +${found.value}`);
-    } else {
-      hideTooltip();
-    }
-  };
-  canvas.onmouseleave = hideTooltip;
+  // Draw sparklines after DOM update
+  requestAnimationFrame(() => {
+    container.querySelectorAll('.trend-row-spark').forEach(canvas => {
+      const idx = parseInt(canvas.dataset.seriesIdx);
+      const s = filtered[idx];
+      if (!s) return;
+      const color = '#00d4ff';
+      drawSparkline(canvas, s.deltas, dates, metric, color);
+    });
+  });
 }
-
-let trendSelectPopulated = false;
 
 function renderTrendCharts() {
   trendDeltaCache = computeDailyDeltas();
-  if (trendDeltaCache.series.length > 0 && !trendSelectPopulated) {
-    populateArticleSelect(trendDeltaCache.series);
-    trendSelectPopulated = true;
-  }
-  const filtered = filterTrendSeries(trendDeltaCache);
-  renderTrendChart('pvTrendCanvas', 'pvTrendLegend', 'pvTrendBadge', 'pv_delta', trendDeltaCache.dates, filtered);
-  renderTrendChart('likeTrendCanvas', 'likeTrendLegend', 'likeTrendBadge', 'like_delta', trendDeltaCache.dates, filtered);
+  renderTrendRows();
 }
 
+// Tab switching
+document.querySelectorAll('.trend-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.trend-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    trendActiveMetric = tab.dataset.metric;
+    renderTrendRows();
+  });
+});
+
 // Filter event listeners
-['trendDayFilter', 'trendPvMin', 'trendArticleSelect'].forEach(id => {
+['trendDayFilter', 'trendMinDelta'].forEach(id => {
   document.getElementById(id).addEventListener('change', () => {
-    if (!trendDeltaCache) return;
-    const filtered = filterTrendSeries(trendDeltaCache);
-    renderTrendChart('pvTrendCanvas', 'pvTrendLegend', 'pvTrendBadge', 'pv_delta', trendDeltaCache.dates, filtered);
-    renderTrendChart('likeTrendCanvas', 'likeTrendLegend', 'likeTrendBadge', 'like_delta', trendDeltaCache.dates, filtered);
+    renderTrendRows();
   });
 });
 
