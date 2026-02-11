@@ -326,10 +326,17 @@ body::before {
   color: var(--accent-cyan);
 }
 
-/* Scatter plot (canvas) */
-canvas {
+/* Canvas inside chart containers (scatter, eta trend) */
+.chart-container canvas {
   width: 100% !important;
   height: 100% !important;
+}
+
+/* Sparkline canvas: fixed height */
+canvas.trend-row-spark {
+  width: 100%;
+  height: 56px;
+  display: block;
 }
 
 /* Decay chart */
@@ -560,11 +567,11 @@ canvas {
 
 .trend-row {
   display: grid;
-  grid-template-columns: minmax(180px, 1fr) 3fr 60px;
+  grid-template-columns: minmax(160px, 1fr) 3fr 50px;
   align-items: center;
-  gap: 12px;
-  padding: 6px 8px;
-  border-radius: 4px;
+  gap: 8px;
+  padding: 2px 8px;
+  border-radius: 3px;
   transition: background 0.15s;
   cursor: default;
 }
@@ -572,7 +579,7 @@ canvas {
 .trend-row:hover { background: var(--bg-card); }
 
 .trend-row-title {
-  font-size: 13px;
+  font-size: 12px;
   color: var(--text-secondary);
   white-space: nowrap;
   overflow: hidden;
@@ -580,12 +587,14 @@ canvas {
 }
 
 .trend-row-spark {
-  height: 32px;
+  height: 56px;
+  max-height: 56px;
+  min-height: 56px;
 }
 
 .trend-row-value {
   font-family: var(--font-mono);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   text-align: right;
   color: var(--accent-cyan);
@@ -1384,8 +1393,7 @@ function filterTrendSeries(allData, metric) {
     filtered = filtered.filter(s => s[totalKey] >= minDelta);
   }
 
-  const totalKey = metric === 'pv_delta' ? 'totalPvDelta' : 'totalLikeDelta';
-  filtered.sort((a, b) => b[totalKey] - a[totalKey]);
+  filtered.sort((a, b) => (b.published_at || '').localeCompare(a.published_at || ''));
   return filtered;
 }
 
@@ -1401,9 +1409,11 @@ function drawSparkline(canvas, deltas, dates, metric, color) {
 
   if (deltas.length === 0) return;
 
-  const pad = 4;
-  const cw = W - pad * 2;
-  const ch = H - pad * 2;
+  const padX = 4;
+  const padTop = 4;
+  const padBottom = 16; // space for date labels
+  const cw = W - padX * 2;
+  const ch = H - padTop - padBottom;
 
   const vals = dates.map(d => {
     const found = deltas.find(dd => dd.date === d);
@@ -1411,15 +1421,14 @@ function drawSparkline(canvas, deltas, dates, metric, color) {
   });
   const maxVal = Math.max(...vals, 1);
 
+  const xPos = (i) => padX + (cw / Math.max(vals.length - 1, 1)) * i;
+  const yPos = (v) => padTop + ch - (v / maxVal) * ch;
+
   // Fill area
   ctx.beginPath();
-  ctx.moveTo(pad, pad + ch);
-  vals.forEach((v, i) => {
-    const x = pad + (cw / Math.max(vals.length - 1, 1)) * i;
-    const y = pad + ch - (v / maxVal) * ch;
-    ctx.lineTo(x, y);
-  });
-  ctx.lineTo(pad + cw, pad + ch);
+  ctx.moveTo(padX, padTop + ch);
+  vals.forEach((v, i) => ctx.lineTo(xPos(i), yPos(v)));
+  ctx.lineTo(padX + cw, padTop + ch);
   ctx.closePath();
   ctx.fillStyle = color + '18';
   ctx.fill();
@@ -1427,10 +1436,8 @@ function drawSparkline(canvas, deltas, dates, metric, color) {
   // Line
   ctx.beginPath();
   vals.forEach((v, i) => {
-    const x = pad + (cw / Math.max(vals.length - 1, 1)) * i;
-    const y = pad + ch - (v / maxVal) * ch;
-    if (i === 0) ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
+    if (i === 0) ctx.moveTo(xPos(i), yPos(v));
+    else ctx.lineTo(xPos(i), yPos(v));
   });
   ctx.strokeStyle = color;
   ctx.lineWidth = 2;
@@ -1438,13 +1445,24 @@ function drawSparkline(canvas, deltas, dates, metric, color) {
 
   // Dots
   vals.forEach((v, i) => {
-    const x = pad + (cw / Math.max(vals.length - 1, 1)) * i;
-    const y = pad + ch - (v / maxVal) * ch;
     ctx.beginPath();
-    ctx.arc(x, y, 2.5, 0, Math.PI * 2);
+    ctx.arc(xPos(i), yPos(v), 2.5, 0, Math.PI * 2);
     ctx.fillStyle = color;
     ctx.fill();
   });
+
+  // X-axis date labels (first and last only)
+  ctx.fillStyle = '#888888';
+  ctx.font = '11px JetBrains Mono';
+  const fmt = (d) => d.substring(5).replace('-', '/');
+  // First date
+  ctx.textAlign = 'start';
+  ctx.fillText(fmt(dates[0]), padX, H - 2);
+  // Last date
+  if (dates.length > 1) {
+    ctx.textAlign = 'end';
+    ctx.fillText(fmt(dates[dates.length - 1]), padX + cw, H - 2);
+  }
 }
 
 function renderTrendRows() {
@@ -1524,7 +1542,13 @@ function showTooltip(e, title, body) {
   document.getElementById('tooltipTitle').textContent = title;
   document.getElementById('tooltipBody').textContent = body;
   tt.style.display = 'block';
-  tt.style.left = (e.clientX + 14) + 'px';
+  const ttWidth = tt.offsetWidth;
+  const spaceRight = window.innerWidth - e.clientX;
+  if (spaceRight < ttWidth + 24) {
+    tt.style.left = (e.clientX - ttWidth - 14) + 'px';
+  } else {
+    tt.style.left = (e.clientX + 14) + 'px';
+  }
   tt.style.top = (e.clientY - 10) + 'px';
 }
 
