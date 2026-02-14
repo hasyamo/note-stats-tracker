@@ -335,7 +335,7 @@ body::before {
 /* Sparkline canvas: fixed height */
 canvas.trend-row-spark {
   width: 100%;
-  height: 56px;
+  height: 66px;
   display: block;
 }
 
@@ -567,7 +567,7 @@ canvas.trend-row-spark {
 
 .trend-row {
   display: grid;
-  grid-template-columns: minmax(160px, 1fr) 3fr 50px;
+  grid-template-columns: minmax(220px, 1.5fr) 3fr 50px;
   align-items: center;
   gap: 8px;
   padding: 2px 8px;
@@ -581,15 +581,15 @@ canvas.trend-row-spark {
 .trend-row-title {
   font-size: 12px;
   color: var(--text-secondary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  word-break: break-all;
+  line-height: 1.4;
 }
 
 .trend-row-spark {
-  height: 56px;
-  max-height: 56px;
-  min-height: 56px;
+  height: 66px;
+  max-height: 66px;
+  min-height: 66px;
 }
 
 .trend-row-value {
@@ -1678,7 +1678,7 @@ function filterTrendSeries(allData, metric) {
   return filtered;
 }
 
-function drawSparkline(canvas, deltas, dates, metric, color) {
+function drawSparkline(canvas, deltas, dates, metric, color, pubDate) {
   const ctx = canvas.getContext('2d');
   const dpr = window.devicePixelRatio || 1;
   const W = canvas.clientWidth;
@@ -1691,7 +1691,7 @@ function drawSparkline(canvas, deltas, dates, metric, color) {
   if (deltas.length === 0) return;
 
   const padX = 4;
-  const padTop = 4;
+  const padTop = 14;
   const padBottom = 16; // space for date labels
   const cw = W - padX * 2;
   const ch = H - padTop - padBottom;
@@ -1732,6 +1732,28 @@ function drawSparkline(canvas, deltas, dates, metric, color) {
     ctx.fill();
   });
 
+  // Publish date marker
+  if (pubDate) {
+    // Find nearest date in dates array (delta dates start from day after first data)
+    const pubIdx = dates.indexOf(pubDate);
+    // Also check if pubDate is one day before the first delta date
+    if (pubIdx >= 0) {
+      const px = xPos(pubIdx);
+      ctx.strokeStyle = color + '66';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([3, 3]);
+      ctx.beginPath();
+      ctx.moveTo(px, padTop);
+      ctx.lineTo(px, padTop + ch);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = color + 'aa';
+      ctx.font = '9px JetBrains Mono';
+      ctx.textAlign = 'center';
+      ctx.fillText('pub', px, padTop - 2);
+    }
+  }
+
   // X-axis date labels (first and last only)
   ctx.fillStyle = '#888888';
   ctx.font = '11px JetBrains Mono';
@@ -1770,7 +1792,7 @@ function renderTrendRows() {
 
   container.innerHTML = filtered.map((s, i) => {
     const shortTitle = s.title.replace(/^【.*?】/, '').replace(/\|.*$/, '').trim();
-    const displayTitle = shortTitle.length > 30 ? shortTitle.substring(0, 30) + '...' : shortTitle;
+    const displayTitle = shortTitle;
     const total = s[totalKey];
     const cat = s.category || '?';
     const catColor = getCategoryColor(cat);
@@ -1779,7 +1801,7 @@ function renderTrendRows() {
       <div class="trend-row" data-idx="${i}"
         onmouseenter="showTooltip(event, '${escHtml(s.title)}', '${label}増分合計: +${total} / 投稿: ${s.published_at ? s.published_at.substring(0,10) : "不明"}${catInfo}')"
         onmouseleave="hideTooltip()">
-        <div class="trend-row-title"><span class="cat-badge" style="color:${catColor}">[${cat}]</span>${escHtml(displayTitle)}</div>
+        <div class="trend-row-title"><span class="cat-badge" style="color:${catColor}">[${cat}]</span>${escHtml(displayTitle)}<div style="font-size:10px;color:var(--text-muted);margin-top:2px;">${s.published_at ? s.published_at.substring(0,10) : ''}</div></div>
         <canvas class="trend-row-spark" data-series-idx="${i}"></canvas>
         <div class="trend-row-value" style="color:${catColor}">+${total}</div>
       </div>`;
@@ -1792,7 +1814,8 @@ function renderTrendRows() {
       const s = filtered[idx];
       if (!s) return;
       const color = getCategoryColor(s.category || '?');
-      drawSparkline(canvas, s.deltas, dates, metric, color);
+      const pubDate = s.published_at ? s.published_at.substring(0, 10) : null;
+      drawSparkline(canvas, s.deltas, dates, metric, color, pubDate);
     });
   });
 }
