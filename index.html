@@ -259,7 +259,7 @@ body::before {
   flex-direction: column;
   gap: 3px;
   overflow-y: auto;
-  max-height: 360px;
+  max-height: 440px;
   padding-right: 8px;
 }
 
@@ -720,13 +720,18 @@ canvas.trend-row-spark {
     <div class="panel">
       <div class="panel-header">
         <div class="panel-title">スキ率ランキング</div>
-        <div class="panel-badge" id="rankingBadge">TOP 20</div>
+        <div class="toggle-group" id="rankingToggle">
+          <div class="toggle-btn" data-top="5">TOP 5</div>
+          <div class="toggle-btn" data-top="10">TOP 10</div>
+          <div class="toggle-btn active" data-top="20">TOP 20</div>
+        </div>
       </div>
       <div class="chart-container">
         <div class="bar-chart" id="rankingChart">
           <div class="no-data">CSVデータを読み込んでください</div>
         </div>
       </div>
+      <div class="decay-legend" id="rankingLegend"></div>
     </div>
 
     <!-- 2. PV vs Likes Scatter -->
@@ -745,24 +750,24 @@ canvas.trend-row-spark {
     </div>
 
     <!-- 3. Category η Comparison (full width) -->
-    <div class="panel panel-full">
+    <div class="panel panel-full" style="min-height:auto; max-height:600px;">
       <div class="panel-header">
         <div class="panel-title">カテゴリ別 スキ率比較</div>
         <div class="panel-badge" id="catBadge">--</div>
       </div>
-      <div class="chart-container" style="min-height:280px;">
+      <div class="chart-container" style="min-height:280px; max-height:420px;">
         <canvas id="categoryCanvas"></canvas>
       </div>
       <div class="decay-legend" id="categoryLegend"></div>
     </div>
 
     <!-- 4. Recent Articles η Trend (full width) -->
-    <div class="panel panel-full">
+    <div class="panel panel-full" style="min-height:auto; max-height:600px;">
       <div class="panel-header">
         <div class="panel-title">直近2週間 スキ率推移</div>
         <div class="panel-badge" id="etaTrendBadge">--</div>
       </div>
-      <div class="chart-container">
+      <div class="chart-container" style="max-height:420px;">
         <canvas id="etaTrendCanvas"></canvas>
       </div>
       <div class="decay-legend" id="etaTrendLegend"></div>
@@ -1063,13 +1068,15 @@ function updateHeader(dates) {
 }
 
 // ===== 1. Ranking =====
+let rankingTopN = 20;
+
 function renderRanking() {
   const container = document.getElementById('rankingChart');
   const sorted = [...latestSnapshot]
     .map(a => ({ ...a, eta: a.read_count > 0 ? (a.like_count / a.read_count * 100) : 0 }))
     .sort((a, b) => b.eta - a.eta);
 
-  const top = sorted.slice(0, 20);
+  const top = sorted.slice(0, rankingTopN);
   const maxEta = Math.max(...top.map(a => a.eta), 1);
 
   container.innerHTML = top.map((a, i) => {
@@ -1088,7 +1095,9 @@ function renderRanking() {
       </div>`;
   }).join('');
 
-  document.getElementById('rankingBadge').textContent = `TOP ${top.length}`;
+  document.getElementById('rankingLegend').innerHTML = Object.entries(CATEGORY_META).map(([k, v]) =>
+    `<div class="decay-legend-item"><div class="decay-legend-dot" style="background:${v.color}"></div>${k} ${v.name}</div>`
+  ).join('');
 }
 
 // ===== 2. Scatter =====
@@ -1245,6 +1254,16 @@ function renderScatter() {
   };
   canvas.onmouseleave = hideTooltip;
 }
+
+// Ranking toggle
+document.querySelectorAll('#rankingToggle .toggle-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#rankingToggle .toggle-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    rankingTopN = parseInt(btn.dataset.top);
+    renderRanking();
+  });
+});
 
 // Scatter toggle
 document.querySelectorAll('#scatterToggle .toggle-btn').forEach(btn => {
