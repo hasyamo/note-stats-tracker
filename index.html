@@ -600,6 +600,38 @@ canvas.trend-row-spark {
   color: var(--accent-cyan);
 }
 
+/* Toggle group (scatter mode switch) */
+.toggle-group {
+  display: flex;
+  gap: 2px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.toggle-btn {
+  padding: 3px 10px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: 3px;
+  transition: all 0.15s;
+}
+
+.toggle-btn.active {
+  background: var(--accent-cyan-dim);
+  color: var(--accent-cyan);
+  border-color: #00d4ff44;
+}
+
+/* Category badge */
+.cat-badge {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  margin-right: 4px;
+}
+
 /* No data state */
 .no-data {
   display: flex;
@@ -701,14 +733,30 @@ canvas.trend-row-spark {
     <div class="panel">
       <div class="panel-header">
         <div class="panel-title">PV × スキ 散布図</div>
-        <div class="panel-badge">相関分析</div>
+        <div class="toggle-group" id="scatterToggle">
+          <div class="toggle-btn active" data-mode="eta">η色分け</div>
+          <div class="toggle-btn" data-mode="category">カテゴリ色分け</div>
+        </div>
       </div>
       <div class="chart-container">
         <canvas id="scatterCanvas"></canvas>
       </div>
+      <div class="decay-legend" id="scatterLegend"></div>
     </div>
 
-    <!-- 3. Recent Articles η Trend (full width) -->
+    <!-- 3. Category η Comparison (full width) -->
+    <div class="panel panel-full">
+      <div class="panel-header">
+        <div class="panel-title">カテゴリ別 スキ率比較</div>
+        <div class="panel-badge" id="catBadge">--</div>
+      </div>
+      <div class="chart-container" style="min-height:280px;">
+        <canvas id="categoryCanvas"></canvas>
+      </div>
+      <div class="decay-legend" id="categoryLegend"></div>
+    </div>
+
+    <!-- 4. Recent Articles η Trend (full width) -->
     <div class="panel panel-full">
       <div class="panel-header">
         <div class="panel-title">直近2週間 スキ率推移</div>
@@ -742,6 +790,17 @@ canvas.trend-row-spark {
         <label>増分 ≥
           <input id="trendMinDelta" type="number" value="0" min="0" style="width:60px">
         </label>
+        <label>カテゴリ:
+          <select id="trendCatFilter">
+            <option value="">すべて</option>
+            <option value="A">A 設計思想</option>
+            <option value="B">B 試行錯誤</option>
+            <option value="C">C ハウツー</option>
+            <option value="D">D 振り返り</option>
+            <option value="E">E キャラ系</option>
+            <option value="AB">A+B 一次情報</option>
+          </select>
+        </label>
       </div>
       <div class="trend-rows" id="trendRows">
         <div class="no-data">データを読み込み中...</div>
@@ -766,6 +825,26 @@ let articlesData = [];
 let dailySummary = [];
 let latestSnapshot = [];
 let summaryData = []; // from daily_summary.csv
+let categoryMap = {}; // key → category
+
+// ===== Category Meta =====
+const CATEGORY_META = {
+  A: { name: '設計思想', color: '#00d4ff', primary: true },
+  B: { name: '試行錯誤', color: '#ff3d8e', primary: true },
+  C: { name: 'ハウツー', color: '#ffb020', primary: false },
+  D: { name: '振り返り', color: '#00e676', primary: false },
+  E: { name: 'キャラ系', color: '#a855f7', primary: false },
+  F: { name: '初期日記', color: '#555570', primary: false },
+  G: { name: '特別枠',  color: '#888888', primary: false },
+};
+
+function getCategoryColor(cat) {
+  return (CATEGORY_META[cat] || {}).color || '#555570';
+}
+
+function getCategoryName(cat) {
+  return (CATEGORY_META[cat] || {}).name || '不明';
+}
 
 // ===== CSV Parser =====
 function parseCSV(text) {
@@ -800,6 +879,7 @@ function processData(rows) {
     read_count: parseInt(r.read_count) || 0,
     like_count: parseInt(r.like_count) || 0,
     comment_count: parseInt(r.comment_count) || 0,
+    category: categoryMap[r.key] || '?',
   }));
 
   // Get unique dates sorted
@@ -822,6 +902,7 @@ function processData(rows) {
   updateCommentary();
   renderRanking();
   renderScatter();
+  renderCategoryChart();
   renderEtaTrend();
   renderTrendCharts();
   updateHeader(dates);
@@ -993,15 +1074,17 @@ function renderRanking() {
 
   container.innerHTML = top.map((a, i) => {
     const pct = (a.eta / maxEta * 100).toFixed(1);
-    const colorClass = i < 3 ? 'cyan' : i < 10 ? 'amber' : 'pink';
+    const cat = a.category || '?';
+    const catColor = getCategoryColor(cat);
     const shortTitle = a.title.replace(/^【.*?】/, '').replace(/\|.*$/, '').trim();
+    const catInfo = cat !== '?' ? ` / カテゴリ: ${cat}（${getCategoryName(cat)}）` : '';
     return `
-      <div class="bar-row" onmouseenter="showTooltip(event, '${escHtml(a.title)}', 'PV: ${a.read_count} / スキ: ${a.like_count} / η: ${a.eta.toFixed(1)}%')" onmouseleave="hideTooltip()">
+      <div class="bar-row" onmouseenter="showTooltip(event, '${escHtml(a.title)}', 'PV: ${a.read_count} / スキ: ${a.like_count} / η: ${a.eta.toFixed(1)}%${catInfo}')" onmouseleave="hideTooltip()">
         <div class="bar-label-wrap">
-          <div class="bar-title">${shortTitle || a.key}</div>
-          <div class="bar-track"><div class="bar-fill ${colorClass}" style="width:${pct}%"></div></div>
+          <div class="bar-title"><span class="cat-badge" style="color:${catColor}">[${cat}]</span>${shortTitle || a.key}</div>
+          <div class="bar-track"><div class="bar-fill" style="width:${pct}%; background: linear-gradient(90deg, ${catColor}, ${catColor}88);"></div></div>
         </div>
-        <div class="bar-value">${a.eta.toFixed(1)}%</div>
+        <div class="bar-value" style="color:${catColor}">${a.eta.toFixed(1)}%</div>
       </div>`;
   }).join('');
 
@@ -1009,6 +1092,8 @@ function renderRanking() {
 }
 
 // ===== 2. Scatter =====
+let scatterMode = 'eta'; // 'eta' or 'category'
+
 function renderScatter() {
   const canvas = document.getElementById('scatterCanvas');
   const ctx = canvas.getContext('2d');
@@ -1068,12 +1153,20 @@ function renderScatter() {
   });
 
   points.forEach(p => {
-    const isHigh = p.eta > avgEta * 1.5;
-    const isLow = p.eta < avgEta * 0.5 && p.read_count > maxPV * 0.2;
-    let color = '#00d4ff';
-    let radius = 4;
-    if (isHigh) { color = '#00e676'; radius = 6; }
-    if (isLow) { color = '#ff3d8e'; radius = 6; }
+    let color, radius;
+    if (scatterMode === 'category') {
+      const cat = p.category || '?';
+      color = getCategoryColor(cat);
+      const meta = CATEGORY_META[cat];
+      radius = (meta && meta.primary) ? 7 : (cat === 'F' || cat === 'G') ? 3 : 5;
+    } else {
+      const isHigh = p.eta > avgEta * 1.5;
+      const isLow = p.eta < avgEta * 0.5 && p.read_count > maxPV * 0.2;
+      color = '#00d4ff';
+      radius = 4;
+      if (isHigh) { color = '#00e676'; radius = 6; }
+      if (isLow) { color = '#ff3d8e'; radius = 6; }
+    }
 
     ctx.beginPath();
     ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
@@ -1083,11 +1176,15 @@ function renderScatter() {
     ctx.lineWidth = 1.5;
     ctx.stroke();
 
-    if (isHigh || isLow) {
-      ctx.fillStyle = color;
-      ctx.font = '11px JetBrains Mono';
-      const label = p.title.replace(/^【.*?】/, '').replace(/\|.*$/, '').substring(0, 15);
-      ctx.fillText(label, p.x + 8, p.y - 4);
+    if (scatterMode === 'eta') {
+      const isHigh = p.eta > avgEta * 1.5;
+      const isLow = p.eta < avgEta * 0.5 && p.read_count > maxPV * 0.2;
+      if (isHigh || isLow) {
+        ctx.fillStyle = isHigh ? '#00e676' : '#ff3d8e';
+        ctx.font = '11px JetBrains Mono';
+        const label = p.title.replace(/^【.*?】/, '').replace(/\|.*$/, '').substring(0, 15);
+        ctx.fillText(label, p.x + 8, p.y - 4);
+      }
     }
   });
 
@@ -1117,6 +1214,19 @@ function renderScatter() {
     ctx.fillText(val, pad.left + (cw / 4) * i, H - pad.bottom + 16);
   }
 
+  // Legend
+  const legend = document.getElementById('scatterLegend');
+  if (scatterMode === 'category') {
+    legend.innerHTML = Object.entries(CATEGORY_META).map(([k, v]) =>
+      `<div class="decay-legend-item"><div class="decay-legend-dot" style="background:${v.color}"></div>${k} ${v.name}</div>`
+    ).join('');
+  } else {
+    legend.innerHTML = `
+      <div class="decay-legend-item"><div class="decay-legend-dot" style="background:#00e676"></div>η高（平均×1.5以上）</div>
+      <div class="decay-legend-item"><div class="decay-legend-dot" style="background:#00d4ff"></div>η平均付近</div>
+      <div class="decay-legend-item"><div class="decay-legend-dot" style="background:#ff3d8e"></div>η低（平均×0.5以下）</div>`;
+  }
+
   // Canvas tooltip
   canvas.onmousemove = (e) => {
     const r = canvas.getBoundingClientRect();
@@ -1126,7 +1236,9 @@ function renderScatter() {
       if (Math.hypot(p.x - mx, p.y - my) < 10) { found = p; break; }
     }
     if (found) {
-      showTooltip(e, found.title, `PV: ${found.read_count} / スキ: ${found.like_count} / η: ${(found.eta * 100).toFixed(1)}%`);
+      const cat = found.category || '?';
+      const catInfo = cat !== '?' ? ` / カテゴリ: ${cat}（${getCategoryName(cat)}）` : '';
+      showTooltip(e, found.title, `PV: ${found.read_count} / スキ: ${found.like_count} / η: ${(found.eta * 100).toFixed(1)}%${catInfo}`);
     } else {
       hideTooltip();
     }
@@ -1134,7 +1246,151 @@ function renderScatter() {
   canvas.onmouseleave = hideTooltip;
 }
 
-// ===== 3. Recent Articles η Dot Plot =====
+// Scatter toggle
+document.querySelectorAll('#scatterToggle .toggle-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#scatterToggle .toggle-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    scatterMode = btn.dataset.mode;
+    renderScatter();
+  });
+});
+
+// ===== 3. Category η Comparison =====
+function renderCategoryChart() {
+  const canvas = document.getElementById('categoryCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const rect = canvas.parentElement.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  ctx.scale(dpr, dpr);
+  const W = rect.width, H = rect.height;
+  ctx.clearRect(0, 0, W, H);
+
+  if (latestSnapshot.length === 0) return;
+
+  // Aggregate by category
+  const catStats = {};
+  latestSnapshot.forEach(a => {
+    const cat = a.category || '?';
+    if (cat === '?') return;
+    if (!catStats[cat]) catStats[cat] = { totalPV: 0, totalLikes: 0, count: 0 };
+    catStats[cat].totalPV += a.read_count;
+    catStats[cat].totalLikes += a.like_count;
+    catStats[cat].count++;
+  });
+
+  const categories = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
+  const catData = categories.map(c => {
+    const s = catStats[c] || { totalPV: 0, totalLikes: 0, count: 0 };
+    return {
+      cat: c,
+      eta: s.totalPV > 0 ? (s.totalLikes / s.totalPV * 100) : 0,
+      count: s.count,
+      avgPV: s.count > 0 ? Math.round(s.totalPV / s.count) : 0,
+    };
+  }).filter(d => d.count > 0);
+
+  if (catData.length === 0) return;
+
+  const pad = { top: 20, right: 160, bottom: 20, left: 120 };
+  const cw = W - pad.left - pad.right;
+  const ch = H - pad.top - pad.bottom;
+  const barHeight = Math.min(32, ch / catData.length - 8);
+  const gap = (ch - barHeight * catData.length) / Math.max(catData.length - 1, 1);
+  const maxEta = Math.max(...catData.map(d => d.eta), 1);
+
+  // Overall avg eta
+  const totalLikes = latestSnapshot.reduce((s, a) => s + a.like_count, 0);
+  const totalPV = latestSnapshot.reduce((s, a) => s + a.read_count, 0);
+  const overallEta = totalPV > 0 ? (totalLikes / totalPV * 100) : 0;
+
+  // A+B background highlight
+  const primaryCats = catData.filter(d => CATEGORY_META[d.cat] && CATEGORY_META[d.cat].primary);
+  if (primaryCats.length > 0) {
+    const firstIdx = catData.indexOf(primaryCats[0]);
+    const lastIdx = catData.indexOf(primaryCats[primaryCats.length - 1]);
+    const yStart = pad.top + firstIdx * (barHeight + gap) - 4;
+    const yEnd = pad.top + lastIdx * (barHeight + gap) + barHeight + 4;
+    ctx.fillStyle = '#00d4ff08';
+    ctx.fillRect(pad.left, yStart, cw, yEnd - yStart);
+    ctx.fillStyle = '#00d4ff30';
+    ctx.font = '10px JetBrains Mono';
+    ctx.textAlign = 'left';
+    ctx.fillText('一次情報ゾーン', pad.left + 4, yStart + 10);
+  }
+
+  // Overall avg eta vertical line
+  const avgX = pad.left + (overallEta / maxEta) * cw;
+  ctx.strokeStyle = '#ffb02044';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([6, 4]);
+  ctx.beginPath();
+  ctx.moveTo(avgX, pad.top);
+  ctx.lineTo(avgX, pad.top + ch);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = '#ffb02077';
+  ctx.font = '10px JetBrains Mono';
+  ctx.textAlign = 'center';
+  ctx.fillText(`全体η=${overallEta.toFixed(1)}%`, avgX, pad.top - 6);
+
+  // Draw bars
+  const barPoints = [];
+  catData.forEach((d, i) => {
+    const y = pad.top + i * (barHeight + gap);
+    const barW = (d.eta / maxEta) * cw;
+    const color = getCategoryColor(d.cat);
+    const meta = CATEGORY_META[d.cat];
+    const opacity = d.cat === 'F' ? '66' : 'cc';
+
+    // Bar
+    ctx.fillStyle = color + opacity;
+    ctx.fillRect(pad.left, y, barW, barHeight);
+
+    // Label left
+    ctx.fillStyle = color;
+    ctx.font = '13px JetBrains Mono';
+    ctx.textAlign = 'right';
+    ctx.fillText(`[${d.cat}] ${meta ? meta.name : '?'}`, pad.left - 8, y + barHeight / 2 + 5);
+
+    // Stats right
+    ctx.fillStyle = '#8888a0';
+    ctx.font = '12px JetBrains Mono';
+    ctx.textAlign = 'left';
+    ctx.fillText(`${d.eta.toFixed(1)}%  (${d.count}記事 / avg ${d.avgPV} PV)`, pad.left + barW + 8, y + barHeight / 2 + 5);
+
+    barPoints.push({ x: pad.left, y, w: barW, h: barHeight, ...d });
+  });
+
+  document.getElementById('catBadge').textContent = `${catData.length} categories`;
+
+  // Legend
+  document.getElementById('categoryLegend').innerHTML = `
+    <div class="decay-legend-item" style="color:#00d4ff55">■ 一次情報ゾーン（A+B）</div>
+    <div class="decay-legend-item" style="color:#ffb02077">--- 全体平均 η=${overallEta.toFixed(1)}%</div>`;
+
+  // Tooltip
+  canvas.onmousemove = (e) => {
+    const r = canvas.getBoundingClientRect();
+    const mx = e.clientX - r.left, my = e.clientY - r.top;
+    let found = null;
+    for (const b of barPoints) {
+      if (mx >= b.x && mx <= b.x + b.w + 160 && my >= b.y && my <= b.y + b.h) { found = b; break; }
+    }
+    if (found) {
+      showTooltip(e, `カテゴリ${found.cat}: ${getCategoryName(found.cat)}`,
+        `平均η: ${found.eta.toFixed(1)}% / 記事数: ${found.count} / 平均PV: ${found.avgPV}`);
+    } else {
+      hideTooltip();
+    }
+  };
+  canvas.onmouseleave = hideTooltip;
+}
+
+// ===== 4. Recent Articles η Dot Plot =====
 function renderEtaTrend() {
   const canvas = document.getElementById('etaTrendCanvas');
   const ctx = canvas.getContext('2d');
@@ -1274,15 +1530,9 @@ function renderEtaTrend() {
       const offset = articles.length > 1 ? (j - (articles.length - 1) / 2) * 14 : 0;
       const px = cx + offset;
 
-      // 3-color based on eta vs average (matching scatter plot)
-      let color;
-      if (a.eta > avgEtaForColor * 1.5) {
-        color = '#00e676'; // green - high performer
-      } else if (a.eta < avgEtaForColor * 0.5) {
-        color = '#ff3d8e'; // pink - underperformer
-      } else {
-        color = '#00d4ff'; // cyan - average
-      }
+      // Color by category
+      const cat = a.category || '?';
+      const color = cat !== '?' ? getCategoryColor(cat) : '#00d4ff';
 
       // Glow
       ctx.beginPath();
@@ -1299,6 +1549,14 @@ function renderEtaTrend() {
       ctx.lineWidth = 2;
       ctx.stroke();
 
+      // Category label above η
+      if (cat !== '?') {
+        ctx.fillStyle = color + '99';
+        ctx.font = '9px JetBrains Mono';
+        ctx.textAlign = 'center';
+        ctx.fillText(`[${cat}]`, px, cy - 22);
+      }
+
       // η label above dot
       ctx.fillStyle = color;
       ctx.font = '12px JetBrains Mono';
@@ -1311,14 +1569,11 @@ function renderEtaTrend() {
 
   document.getElementById('etaTrendBadge').textContent = `${recentArticles.length} articles`;
 
-  // Legend - 3 color explanation
+  // Legend - category colors
   const legend = document.getElementById('etaTrendLegend');
-  legend.innerHTML = `
-    <div class="decay-legend-item"><div class="decay-legend-dot" style="background:#00e676"></div>η高（平均×1.5以上）</div>
-    <div class="decay-legend-item"><div class="decay-legend-dot" style="background:#00d4ff"></div>η平均付近</div>
-    <div class="decay-legend-item"><div class="decay-legend-dot" style="background:#ff3d8e"></div>η低（平均×0.5以下）</div>
-    <div class="decay-legend-item" style="margin-left:12px;color:#ffb02077">--- 全体平均 η=${avgEtaForColor.toFixed(1)}%</div>
-  `;
+  legend.innerHTML = Object.entries(CATEGORY_META).map(([k, v]) =>
+    `<div class="decay-legend-item"><div class="decay-legend-dot" style="background:${v.color}"></div>${k} ${v.name}</div>`
+  ).join('') + `<div class="decay-legend-item" style="margin-left:12px;color:#ffb02077">--- 全体平均 η=${avgEtaForColor.toFixed(1)}%</div>`;
 
   // Tooltip
   canvas.onmousemove = (e) => {
@@ -1366,8 +1621,9 @@ function computeDailyDeltas() {
     }
     if (deltas.length > 0) {
       series.push({
-        note_id: noteId, title: rows[0].title,
+        note_id: noteId, key: rows[0].key, title: rows[0].title,
         published_at: rows[0].published_at || '',
+        category: rows[0].category || '?',
         totalPvDelta, totalLikeDelta, deltas,
       });
     }
@@ -1391,6 +1647,12 @@ function filterTrendSeries(allData, metric) {
   if (minDelta > 0) {
     const totalKey = metric === 'pv_delta' ? 'totalPvDelta' : 'totalLikeDelta';
     filtered = filtered.filter(s => s[totalKey] >= minDelta);
+  }
+
+  const catFilter = document.getElementById('trendCatFilter').value;
+  if (catFilter) {
+    const cats = catFilter.split('');
+    filtered = filtered.filter(s => cats.includes(s.category));
   }
 
   filtered.sort((a, b) => (b.published_at || '').localeCompare(a.published_at || ''));
@@ -1491,14 +1753,16 @@ function renderTrendRows() {
     const shortTitle = s.title.replace(/^【.*?】/, '').replace(/\|.*$/, '').trim();
     const displayTitle = shortTitle.length > 30 ? shortTitle.substring(0, 30) + '...' : shortTitle;
     const total = s[totalKey];
-    const color = total > 0 ? 'var(--accent-cyan)' : 'var(--text-muted)';
+    const cat = s.category || '?';
+    const catColor = getCategoryColor(cat);
+    const catInfo = cat !== '?' ? ` / カテゴリ: ${cat}（${getCategoryName(cat)}）` : '';
     return `
       <div class="trend-row" data-idx="${i}"
-        onmouseenter="showTooltip(event, '${escHtml(s.title)}', '${label}増分合計: +${total} / 投稿: ${s.published_at ? s.published_at.substring(0,10) : "不明"}')"
+        onmouseenter="showTooltip(event, '${escHtml(s.title)}', '${label}増分合計: +${total} / 投稿: ${s.published_at ? s.published_at.substring(0,10) : "不明"}${catInfo}')"
         onmouseleave="hideTooltip()">
-        <div class="trend-row-title">${escHtml(displayTitle)}</div>
+        <div class="trend-row-title"><span class="cat-badge" style="color:${catColor}">[${cat}]</span>${escHtml(displayTitle)}</div>
         <canvas class="trend-row-spark" data-series-idx="${i}"></canvas>
-        <div class="trend-row-value" style="color:${color}">+${total}</div>
+        <div class="trend-row-value" style="color:${catColor}">+${total}</div>
       </div>`;
   }).join('');
 
@@ -1508,7 +1772,7 @@ function renderTrendRows() {
       const idx = parseInt(canvas.dataset.seriesIdx);
       const s = filtered[idx];
       if (!s) return;
-      const color = '#00d4ff';
+      const color = getCategoryColor(s.category || '?');
       drawSparkline(canvas, s.deltas, dates, metric, color);
     });
   });
@@ -1530,7 +1794,7 @@ document.querySelectorAll('.trend-tab').forEach(tab => {
 });
 
 // Filter event listeners
-['trendDayFilter', 'trendMinDelta'].forEach(id => {
+['trendDayFilter', 'trendMinDelta', 'trendCatFilter'].forEach(id => {
   document.getElementById(id).addEventListener('change', () => {
     renderTrendRows();
   });
@@ -1569,6 +1833,17 @@ async function loadFromRepo() {
       const text = await res.text();
       const rows = parseCSV(text);
       if (rows.length > 0) {
+        // Load article_categories.csv
+        try {
+          const catRes = await fetch('./data/article_categories.csv');
+          if (catRes.ok) {
+            const catText = await catRes.text();
+            const catRows = parseCSV(catText);
+            categoryMap = {};
+            catRows.forEach(r => { categoryMap[r.key] = r.category; });
+          }
+        } catch (e) {}
+
         // Load daily_summary.csv
         try {
           const sumRes = await fetch('./data/daily_summary.csv');
@@ -1598,6 +1873,7 @@ async function loadFromRepo() {
 window.addEventListener('resize', () => {
   if (latestSnapshot.length > 0) {
     renderScatter();
+    renderCategoryChart();
     renderEtaTrend();
     renderTrendCharts();
   }
