@@ -1430,7 +1430,7 @@ function renderEtaTrend() {
   for (let i = 13; i >= 0; i--) {
     const d = new Date(endDate);
     d.setDate(d.getDate() - i);
-    const iso = d.toISOString().substring(0, 10);
+    const iso = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
     daySlots.push(iso);
   }
 
@@ -1638,14 +1638,12 @@ function computeDailyDeltas() {
       totalPvDelta += pvDelta;
       totalLikeDelta += likeDelta;
     }
-    if (deltas.length > 0) {
-      series.push({
-        note_id: noteId, key: rows[0].key, title: rows[0].title,
-        published_at: rows[0].published_at || '',
-        category: rows[0].category || '?',
-        totalPvDelta, totalLikeDelta, deltas,
-      });
-    }
+    series.push({
+      note_id: noteId, key: rows[0].key, title: rows[0].title,
+      published_at: rows[0].published_at || '',
+      category: rows[0].category || '?',
+      totalPvDelta, totalLikeDelta, deltas,
+    });
   });
   return { dates: deltaDates, series };
 }
@@ -1659,7 +1657,7 @@ function filterTrendSeries(allData, metric) {
     const latestDate = allData.dates[allData.dates.length - 1];
     const cutoff = new Date(latestDate + 'T00:00:00');
     cutoff.setDate(cutoff.getDate() - dayFilter);
-    const cutoffStr = cutoff.toISOString().substring(0, 10);
+    const cutoffStr = `${cutoff.getFullYear()}-${String(cutoff.getMonth()+1).padStart(2,'0')}-${String(cutoff.getDate()).padStart(2,'0')}`;
     filtered = filtered.filter(s => s.published_at && s.published_at.substring(0, 10) >= cutoffStr);
   }
 
