@@ -40,6 +40,7 @@ body {
   font-family: var(--font-sans);
   min-height: 100vh;
   overflow-x: hidden;
+  zoom: 1.1;
 }
 
 /* Subtle grid background */
@@ -811,6 +812,18 @@ canvas.trend-row-spark {
         <div class="no-data">データを読み込み中...</div>
       </div>
     </div>
+
+    <!-- 5. Decay Curve -->
+    <div class="panel panel-full" style="min-height:auto; max-height:500px;">
+      <div class="panel-header">
+        <div class="panel-title">記事の消費期限：公開からのPV減衰</div>
+        <div class="panel-badge" id="decayBadge">-- articles</div>
+      </div>
+      <div class="chart-container" style="min-height:auto; max-height:420px;">
+        <canvas id="decayCanvas"></canvas>
+      </div>
+      <div class="decay-legend" id="decayLegend"></div>
+    </div>
   </div>
 
   <footer class="footer">
@@ -910,6 +923,7 @@ function processData(rows) {
   renderCategoryChart();
   renderEtaTrend();
   renderTrendCharts();
+  renderDecayChart();
   updateHeader(dates);
 }
 
@@ -1840,6 +1854,261 @@ document.querySelectorAll('.trend-tab').forEach(tab => {
   });
 });
 
+// ===== 5. Decay Curve =====
+function renderDecayChart() {
+  const canvas = document.getElementById('decayCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const rect = canvas.parentElement.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  ctx.scale(dpr, dpr);
+  const W = rect.width, H = rect.height;
+  ctx.clearRect(0, 0, W, H);
+
+  const MAX_DAY = 14;
+
+  // Get all dates and earliest date
+  const allDates = [...new Set(articlesData.map(a => a.date))].sort();
+  if (allDates.length < 2) {
+    document.getElementById('decayBadge').textContent = '0 articles';
+    return;
+  }
+  const earliestDate = allDates[0];
+
+  // Group by note_id
+  const byId = {};
+  articlesData.forEach(a => {
+    if (!byId[a.note_id]) byId[a.note_id] = [];
+    byId[a.note_id].push(a);
+  });
+
+  // Build decay data for eligible articles
+  const decayArticles = [];
+  Object.entries(byId).forEach(([noteId, rows]) => {
+    rows.sort((a, b) => a.date.localeCompare(b.date));
+    const pubAt = rows[0].published_at;
+    if (!pubAt) return;
+    const pubDay = pubAt.substring(0, 10);
+    // Only include articles published after data collection started (Day0 data available)
+    if (pubDay < earliestDate) return;
+
+    const cat = rows[0].category || '?';
+    const title = rows[0].title;
+
+    // Compute daily PV deltas, assign Day number relative to publish date
+    const dayData = [];
+    const pubDate = new Date(pubDay + 'T00:00:00');
+    for (let i = 0; i < rows.length; i++) {
+      const snapDate = new Date(rows[i].date + 'T00:00:00');
+      const day = Math.round((snapDate - pubDate) / (1000 * 60 * 60 * 24));
+      if (day < 0 || day > MAX_DAY) continue;
+      // Day 0: use read_count as initial PV, Day 1+: delta from previous snapshot
+      const pvDelta = i === 0 ? rows[i].read_count : Math.max(0, rows[i].read_count - rows[i - 1].read_count);
+      dayData.push({ day, pvDelta });
+    }
+    if (dayData.length > 0) {
+      decayArticles.push({ noteId, title, category: cat, pubDay, dayData });
+    }
+  });
+
+  document.getElementById('decayBadge').textContent = `${decayArticles.length} articles`;
+
+  if (decayArticles.length === 0) {
+    ctx.fillStyle = '#555570';
+    ctx.font = '15px JetBrains Mono';
+    ctx.textAlign = 'center';
+    ctx.fillText('対象記事がありません', W / 2, H / 2);
+    document.getElementById('decayLegend').innerHTML = '';
+    return;
+  }
+
+  // Collect values per Day across all articles
+  const dayBins = {};
+  for (let day = 0; day <= MAX_DAY; day++) dayBins[day] = [];
+  decayArticles.forEach(article => {
+    article.dayData.forEach(pt => {
+      if (pt.day >= 0 && pt.day <= MAX_DAY) {
+        dayBins[pt.day].push({ pvDelta: pt.pvDelta, title: article.title, category: article.category });
+      }
+    });
+  });
+
+  // Stats helper
+  const percentile = (arr, p) => {
+    if (arr.length === 0) return 0;
+    const idx = (arr.length - 1) * p;
+    const lo = Math.floor(idx), hi = Math.ceil(idx);
+    return lo === hi ? arr[lo] : arr[lo] + (arr[hi] - arr[lo]) * (idx - lo);
+  };
+
+  // Y-axis max: 95th percentile of all deltas
+  const allDeltas = decayArticles.flatMap(a => a.dayData.map(d => d.pvDelta)).sort((a, b) => a - b);
+  const yMax = Math.max(percentile(allDeltas, 0.95) || 10, 5);
+
+  // Drawing setup
+  const pad = { top: 24, right: 20, bottom: 44, left: 55 };
+  const cw = W - pad.left - pad.right;
+  const ch = H - pad.top - pad.bottom;
+  const colW = cw / (MAX_DAY + 1);
+  const boxW = Math.min(colW * 0.5, 24);
+
+  const xCenter = (day) => pad.left + colW * day + colW / 2;
+  const yPos = (v) => pad.top + ch - Math.min(v / yMax, 1) * ch;
+
+  // Grid lines
+  const gridSteps = 5;
+  for (let i = 0; i <= gridSteps; i++) {
+    const y = pad.top + (ch / gridSteps) * i;
+    ctx.strokeStyle = '#1e1e2e';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(W - pad.right, y); ctx.stroke();
+    const val = Math.round(yMax / gridSteps * (gridSteps - i));
+    ctx.fillStyle = '#555570';
+    ctx.font = '11px JetBrains Mono';
+    ctx.textAlign = 'right';
+    ctx.fillText(val, pad.left - 8, y + 3);
+  }
+
+  // Y-axis label
+  ctx.save();
+  ctx.translate(14, pad.top + ch / 2);
+  ctx.rotate(-Math.PI / 2);
+  ctx.fillStyle = '#555570';
+  ctx.font = '11px JetBrains Mono';
+  ctx.textAlign = 'center';
+  ctx.fillText('日次PV増分', 0, 0);
+  ctx.restore();
+
+  // X-axis labels
+  ctx.fillStyle = '#555570';
+  ctx.font = '11px JetBrains Mono';
+  ctx.textAlign = 'center';
+  for (let day = 0; day <= MAX_DAY; day++) {
+    ctx.fillText(`Day${day}`, xCenter(day), H - pad.bottom + 18);
+  }
+
+  // "Death Valley" zone: Day 3-5 columns
+  const dvLeft = pad.left + colW * 3;
+  const dvRight = pad.left + colW * 6;
+  ctx.fillStyle = 'rgba(255, 179, 71, 0.08)';
+  ctx.fillRect(dvLeft, pad.top, dvRight - dvLeft, ch);
+  ctx.fillStyle = '#ffb34766';
+  ctx.font = '11px JetBrains Mono';
+  ctx.textAlign = 'center';
+  ctx.fillText('死の谷', (dvLeft + dvRight) / 2, pad.top + 14);
+
+  // Store plot points for tooltip hover
+  const plotPoints = [];
+
+  // Draw box plots per Day
+  for (let day = 0; day <= MAX_DAY; day++) {
+    const vals = dayBins[day].map(d => d.pvDelta).sort((a, b) => a - b);
+    if (vals.length === 0) continue;
+
+    const cx = xCenter(day);
+    const q1 = percentile(vals, 0.25);
+    const med = percentile(vals, 0.5);
+    const q3 = percentile(vals, 0.75);
+    const mn = vals[0];
+    const mx = vals[vals.length - 1];
+
+    const yQ1 = yPos(q1), yQ3 = yPos(q3), yMed = yPos(med);
+    const yMin = yPos(mn), yMax_ = yPos(mx);
+    const halfBox = boxW / 2;
+
+    // Whisker (min to Q1, Q3 to max)
+    ctx.strokeStyle = '#555570';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(cx, yMin); ctx.lineTo(cx, yQ1);
+    ctx.moveTo(cx, yQ3); ctx.lineTo(cx, yMax_);
+    ctx.stroke();
+    // Whisker caps
+    ctx.beginPath();
+    ctx.moveTo(cx - halfBox * 0.5, yMin); ctx.lineTo(cx + halfBox * 0.5, yMin);
+    ctx.moveTo(cx - halfBox * 0.5, yMax_); ctx.lineTo(cx + halfBox * 0.5, yMax_);
+    ctx.stroke();
+
+    // Box (Q1 to Q3)
+    ctx.fillStyle = 'rgba(0, 212, 255, 0.12)';
+    ctx.fillRect(cx - halfBox, yQ3, boxW, yQ1 - yQ3);
+    ctx.strokeStyle = 'rgba(0, 212, 255, 0.5)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(cx - halfBox, yQ3, boxW, yQ1 - yQ3);
+
+    // Median line
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(cx - halfBox, yMed);
+    ctx.lineTo(cx + halfBox, yMed);
+    ctx.stroke();
+
+    // Overlay individual dots (jittered horizontally)
+    dayBins[day].forEach((d, j) => {
+      const jitter = (j - (dayBins[day].length - 1) / 2) * 3;
+      const dx = cx + Math.max(-halfBox + 2, Math.min(halfBox - 2, jitter));
+      const dy = yPos(d.pvDelta);
+      const color = getCategoryColor(d.category);
+      ctx.beginPath();
+      ctx.arc(dx, dy, 2.5, 0, Math.PI * 2);
+      ctx.fillStyle = color + 'aa';
+      ctx.fill();
+      plotPoints.push({ x: dx, y: dy, title: d.title, day, pv: d.pvDelta, category: d.category, color });
+    });
+  }
+
+  // Median connecting line (white dashed)
+  const medianPoints = [];
+  for (let day = 0; day <= MAX_DAY; day++) {
+    const vals = dayBins[day].map(d => d.pvDelta).sort((a, b) => a - b);
+    if (vals.length > 0) medianPoints.push({ day, med: percentile(vals, 0.5) });
+  }
+  if (medianPoints.length > 1) {
+    ctx.beginPath();
+    medianPoints.forEach((p, i) => {
+      const x = xCenter(p.day), y = yPos(p.med);
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    });
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([4, 3]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // Tooltip hover
+  canvas.onmousemove = (e) => {
+    const r = canvas.getBoundingClientRect();
+    const mx = e.clientX - r.left;
+    const my = e.clientY - r.top;
+    let closest = null, minDist = 20;
+    plotPoints.forEach(p => {
+      const dist = Math.sqrt((mx - p.x) ** 2 + (my - p.y) ** 2);
+      if (dist < minDist) { minDist = dist; closest = p; }
+    });
+    if (closest) {
+      const cat = closest.category !== '?' ? `[${closest.category}] ` : '';
+      showTooltip(e, `${cat}${closest.title}`, `Day ${closest.day} / 日次PV +${closest.pv}`);
+    } else {
+      hideTooltip();
+    }
+  };
+  canvas.onmouseleave = () => hideTooltip();
+
+  // Legend
+  const legend = document.getElementById('decayLegend');
+  const catEntries = Object.entries(CATEGORY_META)
+    .filter(([cat]) => decayArticles.some(a => a.category === cat))
+    .map(([cat, meta]) => `<span class="decay-legend-item"><span class="decay-legend-dot" style="background:${meta.color}"></span>${cat} ${meta.name}</span>`)
+    .join('');
+  legend.innerHTML = catEntries +
+    '<span class="decay-legend-item"><span style="display:inline-block;width:20px;height:2px;background:rgba(255,255,255,0.9);vertical-align:middle;margin-right:4px;"></span>中央値</span>' +
+    '<span class="decay-legend-item"><span style="display:inline-block;width:12px;height:10px;border:1px solid rgba(0,212,255,0.5);background:rgba(0,212,255,0.12);vertical-align:middle;margin-right:4px;"></span>Q1〜Q3</span>';
+}
+
 // ===== Tooltip =====
 function showTooltip(e, title, body) {
   const tt = document.getElementById('tooltip');
@@ -1916,6 +2185,7 @@ window.addEventListener('resize', () => {
     renderCategoryChart();
     renderEtaTrend();
     renderTrendCharts();
+    renderDecayChart();
   }
 });
 
