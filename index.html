@@ -2115,14 +2115,17 @@ function showTooltip(e, title, body) {
   document.getElementById('tooltipTitle').textContent = title;
   document.getElementById('tooltipBody').textContent = body;
   tt.style.display = 'block';
+  const zoom = parseFloat(getComputedStyle(document.body).zoom) || 1;
+  const mx = e.clientX / zoom;
+  const my = e.clientY / zoom;
   const ttWidth = tt.offsetWidth;
-  const spaceRight = window.innerWidth - e.clientX;
+  const spaceRight = window.innerWidth / zoom - mx;
   if (spaceRight < ttWidth + 24) {
-    tt.style.left = (e.clientX - ttWidth - 14) + 'px';
+    tt.style.left = (mx - ttWidth - 14) + 'px';
   } else {
-    tt.style.left = (e.clientX + 14) + 'px';
+    tt.style.left = (mx + 14) + 'px';
   }
-  tt.style.top = (e.clientY - 10) + 'px';
+  tt.style.top = (my - 10) + 'px';
 }
 
 function hideTooltip() {
