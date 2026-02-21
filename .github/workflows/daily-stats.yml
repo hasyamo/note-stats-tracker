@@ -29,6 +29,10 @@ jobs:
           COOKIE_SET_DATE: ${{ vars.COOKIE_SET_DATE }}
         run: python scripts/fetch_stats.py
 
+      - name: Fetch likes data
+        continue-on-error: true
+        run: python scripts/fetch_likes.py
+
       - name: Commit and push
         run: |
           git config user.name "github-actions[bot]"
