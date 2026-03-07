@@ -177,7 +177,7 @@ body{
 </style>
 </head>
 <body>
-<div id="app">
+<div id="app" style="overflow-x:hidden">
   <div style="display:flex;align-items:center;justify-content:center;min-height:100vh;font-size:14px;color:#999;">
     Loading...
   </div>
@@ -882,7 +882,7 @@ function render(d) {
     </section>
 
     <!-- ACTION -->
-    <section class="sec" style="background:${CREAM}">
+    <section class="sec" style="background:${CREAM};overflow:hidden">
       <div style="max-width:900px;margin:0 auto">
         ${navi('action', false)}
         <span class="badge" style="background:${ACCENT};color:#fff;margin-bottom:16px;display:inline-block">NEXT ACTION</span>
@@ -899,7 +899,7 @@ function render(d) {
               <div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid #f0ecff">
                 <div style="font-size:20px">📝</div>
                 <div style="flex:1;min-width:0">
-                  <a href="${noteURL(r.key)}" target="_blank" style="font-size:13px;font-weight:700;color:${INK};text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${r.title}</a>
+                  <a href="${noteURL(r.key)}" target="_blank" style="font-size:13px;font-weight:700;color:${INK};text-decoration:none;display:block;word-break:break-word" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${r.title}</a>
                   <div style="font-size:10px;color:#999;margin-top:2px">${r.cat}(${CAT_NAMES[r.cat]||'?'}) / η ${r.eta}% / ${r.pv} PV</div>
                 </div>
               </div>
@@ -922,7 +922,7 @@ function render(d) {
             <a href="${noteURL(d.top5Eta[0].key)}" target="_blank" style="display:flex;align-items:center;gap:12px;padding:12px;background:${PINK}08;border-radius:12px;text-decoration:none">
               <div style="font-size:20px">🔗</div>
               <div style="flex:1;min-width:0">
-                <div style="font-size:13px;font-weight:700;color:${INK};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d.top5Eta[0].title}</div>
+                <div style="font-size:13px;font-weight:700;color:${INK};word-break:break-word">${d.top5Eta[0].title}</div>
                 <div style="font-size:10px;color:#999;margin-top:2px">η ${d.top5Eta[0].eta}% — 最も心に残った記事</div>
               </div>
             </a>
