@@ -1,0 +1,1067 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ohayou kanojo wrapped</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Noto+Sans+JP:wght@400;700;900&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<style>
+@keyframes fadeUp{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:translateY(0)}}
+@keyframes ticker{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+@keyframes shimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+@keyframes fadeInSlow{from{opacity:0}to{opacity:1}}
+@keyframes breathe{0%,100%{opacity:.15}50%{opacity:.25}}
+.fu{animation:fadeUp .7s cubic-bezier(.22,1,.36,1) both}
+.d1{animation-delay:.1s}.d2{animation-delay:.2s}.d3{animation-delay:.35s}.d4{animation-delay:.5s}
+*{box-sizing:border-box;margin:0;padding:0;}
+
+:root{
+  --ink:#0a0a14;
+  --cream:#fffbf2;
+  --accent:#6c5ce7;
+  --accent2:#a29bfe;
+  --pink:#fd79a8;
+  --cyan:#00cec9;
+  --gold:#fdcb6e;
+  --red:#ff6b6b;
+  --green:#00b894;
+  --font-display:'Bebas Neue',sans-serif;
+  --font-head:'Syne',sans-serif;
+  --font-body:'Noto Sans JP',sans-serif;
+}
+
+body{
+  background:var(--cream);
+  color:var(--ink);
+  font-family:var(--font-body);
+  min-height:100vh;
+  overflow-x:hidden;
+}
+
+.ticker-wrap{
+  overflow:hidden;white-space:nowrap;
+  border-top:2px solid var(--ink);border-bottom:2px solid var(--ink);
+  padding:10px 0;background:#f0ecff;
+}
+.ticker-inner{
+  display:inline-block;animation:ticker 26s linear infinite;
+  font-family:var(--font-display);font-size:14px;letter-spacing:2px;color:var(--accent);
+}
+
+.badge{
+  display:inline-block;padding:3px 10px;border-radius:20px;
+  font-size:10px;font-family:var(--font-head);font-weight:700;
+  letter-spacing:1px;text-transform:uppercase;
+}
+
+.sec{padding:80px 32px;}
+
+.dc::first-letter{
+  font-size:1.5em;
+  font-weight:900;
+  color:var(--accent);
+}
+.dc-light::first-letter{
+  font-size:1.5em;
+  font-weight:900;
+  color:var(--accent2);
+}
+
+/* Navigator - character + speech bubble */
+.navi{
+  display:flex;gap:20px;align-items:flex-start;margin-bottom:32px;
+}
+.navi-img{
+  width:72px;height:72px;border-radius:50%;object-fit:cover;
+  border:3px solid var(--accent);flex-shrink:0;
+  box-shadow:0 0 20px rgba(108,92,231,0.3);
+}
+.navi-bubble{
+  position:relative;background:#fff;border-radius:16px;padding:14px 18px;
+  font-size:13px;line-height:1.7;color:#333;
+  box-shadow:0 4px 16px rgba(0,0,0,0.06);
+  max-width:500px;
+}
+.navi-bubble::before{
+  content:'';position:absolute;left:-8px;top:20px;
+  border:8px solid transparent;border-right-color:#fff;border-left:0;
+}
+.navi-bubble-dark{
+  background:rgba(255,255,255,0.08);color:var(--cream);
+  box-shadow:0 4px 16px rgba(0,0,0,0.2);
+}
+.navi-bubble-dark::before{border-right-color:rgba(255,255,255,0.08);}
+.navi-name{font-size:10px;color:var(--accent);font-weight:700;font-family:var(--font-head);letter-spacing:1px;margin-bottom:4px;}
+
+.growth-grid{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:center;}
+.stat-row{display:flex;flex-direction:column;gap:20px;margin-top:40px;}
+
+.chibi-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:12px;margin-top:32px;}
+.chibi-card{
+  text-align:center;border-radius:16px;padding:16px 8px;
+  border:1px solid rgba(108,92,231,0.15);background:rgba(108,92,231,0.04);
+  transition:all .3s;cursor:default;
+}
+.chibi-card:hover{transform:translateY(-4px);box-shadow:0 8px 24px rgba(108,92,231,0.15);}
+.chibi-card img{width:80px;height:80px;object-fit:contain;animation:float 3s ease-in-out infinite;}
+.chibi-card:nth-child(2) img{animation-delay:.3s}
+.chibi-card:nth-child(3) img{animation-delay:.6s}
+.chibi-card:nth-child(4) img{animation-delay:.9s}
+.chibi-card:nth-child(5) img{animation-delay:1.2s}
+.chibi-card:nth-child(6) img{animation-delay:1.5s}
+.chibi-card:nth-child(7) img{animation-delay:1.8s}
+.chibi-card.today{border-color:var(--accent);background:rgba(108,92,231,0.12);box-shadow:0 0 24px rgba(108,92,231,0.2);}
+
+.cat-bar{display:flex;height:32px;border-radius:8px;overflow:hidden;margin:12px 0;}
+.cat-bar div{display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;transition:width 1s;}
+
+.fan-card{
+  display:flex;align-items:center;gap:16px;padding:16px 20px;
+  border-radius:12px;border:1px solid rgba(108,92,231,0.12);
+  background:#fff;transition:all .3s;
+}
+.fan-card:hover{transform:translateX(4px);box-shadow:0 4px 16px rgba(108,92,231,0.1);}
+
+.eta-item{
+  padding:12px 16px;border-radius:10px;
+  border:1px solid rgba(108,92,231,0.1);background:#fff;
+  display:flex;align-items:center;gap:12px;
+}
+
+.worst-card{
+  transition:all .3s;cursor:pointer;-webkit-tap-highlight-color:transparent;
+  border-radius:14px;padding:24px 20px;
+}
+.worst-card:hover{transform:translateY(-3px);}
+
+.chart-container{
+  background:#fff;border-radius:16px;padding:24px 16px;
+  box-shadow:0 4px 32px rgba(108,92,231,0.08);
+}
+
+.milestone{
+  display:flex;align-items:center;gap:16px;padding:16px 0;
+  border-bottom:1px solid rgba(255,255,255,0.06);
+}
+.milestone-dot{
+  width:12px;height:12px;border-radius:50%;flex-shrink:0;
+  border:2px solid var(--accent);
+}
+.milestone-dot.filled{background:var(--accent);}
+
+/* Responsive */
+@media(min-width:641px) and (max-width:900px){
+  .sec{padding:64px 24px;}
+  .growth-grid{grid-template-columns:1fr;gap:32px;}
+  .chibi-grid{grid-template-columns:repeat(4,1fr);}
+}
+@media(max-width:640px){
+  .sec{padding:52px 16px;}
+  .growth-grid{grid-template-columns:1fr;gap:24px;}
+  .chibi-grid{grid-template-columns:repeat(4,1fr);}
+  .navi-img{width:56px;height:56px;}
+  .navi-bubble{font-size:12px;padding:12px 14px;}
+  .navi{gap:12px;}
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <div style="display:flex;align-items:center;justify-content:center;min-height:100vh;font-size:14px;color:#999;">
+    Loading...
+  </div>
+</div>
+
+<script>
+const INK = '#0a0a14';
+const CREAM = '#fffbf2';
+const ACCENT = '#6c5ce7';
+const PINK = '#fd79a8';
+const CYAN = '#00cec9';
+const GOLD = '#fdcb6e';
+const GREEN = '#00b894';
+const RED = '#ff6b6b';
+
+const DAYS_JA = ['月','火','水','木','金','土','日'];
+const CHIBI_FILES = ['mon','tue','wed','thu','fri','sat','sun'];
+const CHIBI_NAMES = ['月子','陽','しずく','凛華','るな','まひる','日和'];
+const CHIBI_READING = ['つきこ','よう','しずく','りんか','るな','まひる','ひより'];
+
+// JS getDay: 0=Sun,1=Mon...6=Sat -> map to our 0=Mon...6=Sun
+const RAW_DAY = new Date().getDay();
+const TODAY_IDX = RAW_DAY === 0 ? 6 : RAW_DAY - 1;
+const TODAY_FILE = CHIBI_FILES[TODAY_IDX];
+const TODAY_NAME = CHIBI_NAMES[TODAY_IDX];
+function nameWithReading(i) {
+  return CHIBI_NAMES[i] === CHIBI_READING[i] ? CHIBI_NAMES[i] : CHIBI_NAMES[i] + '(' + CHIBI_READING[i] + ')';
+}
+
+const CAT_NAMES = {A:'設計思想',B:'試行錯誤',C:'ハウツー',D:'振り返り',E:'キャラ系',F:'初期日記',G:'特別枠'};
+const CAT_COLORS = {A:ACCENT,B:CYAN,C:'#e0a800',D:PINK,E:'#e17055',F:'#636e72',G:'#2d3436'};
+const CAT_ORDER = ['A','B','C','D','E','F','G'];
+
+// 月子: 知的でしっかり者、優しく頼れる
+// 陽: 元気いっぱい、明るいムードメーカー
+// しずく: 癒し系で穏やか、包み込む優しさ
+// 凛華: 強気でクール、ツンデレ
+// るな: 活発で明るい、ワクワク感
+// まひる: リラックス、穏やか、ゆったり
+// 日和: おっとり癒し系お姉さん、丁寧で優しい
+const GIRL_LINES = {
+  hero: [
+    'おはよう。今日のデータ、整理しておいたよ。一緒に見よう。',
+    'おっはよー！今日もデータ盛りだくさんだよ！見てみて！',
+    'おはよう...ふふ、今日のデータ、穏やかに見ていこうね。',
+    'おはよ。...べつに、データまとめたわけじゃないし。ほら、早く見なさいよ。',
+    'おっはよー！金曜だよ！今週のデータ、ワクワクしない？',
+    'おはよ～...ゆっくり起きた？データ、のんびり見よっか。',
+    'おはようございます。新しい週のはじまりに、データを振り返ってみましょうね。',
+  ],
+  growth: [
+    '着実に積み上がってるね。継続の力って、やっぱりすごい。',
+    'えっ、この成長率すごくない！？めっちゃ伸びてるじゃん！',
+    'ゆっくりだけど、ちゃんと伸びてるね...安心する。',
+    'ふーん、まあまあじゃない。...って、結構すごいんだけど。',
+    'うわー、右肩上がり！この勢いで週末突入だね！',
+    'のんびり見てるけど...これ、結構すごいことしてるよね。',
+    'まあ、焦らなくていいんですよ。この成長カーブ、素敵です。',
+  ],
+  hallOfFame: [
+    'この結果は、丁寧に書いた記事への正当な評価だと思うよ。',
+    'ランキング発表～！ジャジャーン！どれもいい記事だよね！',
+    'よく読まれた記事たち...嬉しいね、ほんとに。',
+    '...まあ、当然の結果でしょ。いい記事書いてたし。',
+    'きゃー！ベスト記事、今週もキラキラしてるね！',
+    'ふふ、人気記事って何回見ても飽きないよね～。',
+    'どの記事も、読者の方の大切な時間をいただいたもの。ありがたいですね。',
+  ],
+  hallOfShame: [
+    '失敗のデータも、次に活かせる貴重な情報だから。大丈夫。',
+    'あはは、まあこういうのもあるよ！ドンマイドンマイ！',
+    '...読まれなくても、書いたこと自体に意味はあるから。',
+    'べ、べつに慰めてるわけじゃないけど...次があるでしょ。',
+    'ワーストでも気にしない！次で巻き返しちゃおう！',
+    'まあまあ、こういう日もあるよ～。お茶でも飲も？',
+    '失敗も含めて、全部あなたの大切な記録ですよ。',
+  ],
+  fans: [
+    'こうして応援してくれる人がいること、大切にしたいね。',
+    'すごい！こんなに常連さんいるんだ！みんなありがとー！',
+    'いつも読んでくれる人たち...あったかい気持ちになるね。',
+    'べつに感動とかしてないけど...ちゃんと感謝しときなさいよ。',
+    'ファンの人たちのスキ、めっちゃ嬉しいよね！',
+    'スキの通知が来るたび、つながりを感じるよね。',
+    '読者の皆さまのおかげで、ここまで来られたんですね。',
+  ],
+  eta: [
+    'スキ率は記事の質を測る重要な指標。しっかり見ていこう。',
+    'スキ率チェック！数字で見ると面白いよね～！',
+    'スキ率って...その記事がどれだけ心に届いたかってことだよね。',
+    'ふん、数字がすべてじゃないけど...スキ率は正直な指標よ。',
+    'スキ率ランキング～！どのカテゴリが強いかな？',
+    'のんびり分析するのも楽しいね～。',
+    'スキ率は読者の方の共感の深さ。大切にしたい数字ですね。',
+  ],
+  category: [
+    'どんなテーマで書いてきたか、データで可視化してみたよ。',
+    'カテゴリ分布！バランスどうかな？偏ってる？',
+    'こうやって見ると、書いてきたものの全体像が見えるね...。',
+    '...ちゃんとバランス考えて書いてるの？まあいいけど。',
+    'わー、こんなにいろんなジャンル書いてるんだ！すごい！',
+    'ジャンルの地図、面白いね～。どれが好き？',
+    '記事のカテゴリを俯瞰すると、あなたらしさが見えてきますね。',
+  ],
+  journey: [
+    'ここまでの軌跡、一つ一つが大切な記録だね。',
+    'うわー！こんなにたくさん書いてきたんだ！感動！',
+    'ゆっくり歩いてきた道のり...全部、大切な思い出だね。',
+    'べつに感慨深いとか...思ってないし。...すごいけど。',
+    'この道のり、振り返るとワクワクするね！',
+    'のんびり歩いてきたけど...ちゃんとここまで来たんだね。',
+    '一歩一歩、丁寧に積み重ねてきた道のり。素晴らしいですね。',
+  ],
+  action: [
+    'データを見た。次はどう動くか。ここからが設計だよ。',
+    'よーし！次のアクション、一緒に考えよ！',
+    '次にやること...焦らず、一つずつでいいからね。',
+    'データは揃ったでしょ。あとは動くだけよ。...頑張りなさいよ。',
+    '次のアクション！ワクワクするね！どれからやる？',
+    '次やること、のんびり選んでいいよ～。',
+    'データから見えた「次の一手」、一緒に考えましょうね。',
+  ],
+};
+
+function noteURL(key) { return 'https://note.com/hasyamo/n/' + key; }
+
+function getGirlLine(section) {
+  return GIRL_LINES[section][TODAY_IDX];
+}
+
+// Navigator component HTML
+function navi(section, dark) {
+  const cls = dark ? 'navi-bubble navi-bubble-dark' : 'navi-bubble';
+  return `
+    <div class="navi">
+      <img class="navi-img" src="images/eyes/eyes-${TODAY_FILE}.webp" alt="${TODAY_NAME}">
+      <div class="${cls}">
+        <div class="navi-name">${TODAY_NAME}</div>
+        ${getGirlLine(section)}
+      </div>
+    </div>`;
+}
+
+function parseCSV(text) {
+  const lines = text.trim().split('\n');
+  const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g,''));
+  return lines.slice(1).map(line => {
+    const vals = []; let cur = '', inQ = false;
+    for (const ch of line) {
+      if (ch === '"') { inQ = !inQ; continue; }
+      if (ch === ',' && !inQ) { vals.push(cur.trim()); cur = ''; } else cur += ch;
+    }
+    vals.push(cur.trim());
+    return Object.fromEntries(headers.map((h, i) => [h, vals[i] ?? '']));
+  });
+}
+
+async function loadData() {
+  const base = 'data/';
+  const [summaryRaw, articlesRaw, categoriesRaw, likesRaw] = await Promise.all([
+    fetch(base + 'daily_summary.csv').then(r => r.text()),
+    fetch(base + 'articles.csv').then(r => r.text()),
+    fetch(base + 'article_categories.csv').then(r => r.text()),
+    fetch(base + 'likes.csv').then(r => r.text()),
+  ]);
+  return compute(parseCSV(summaryRaw), parseCSV(articlesRaw), parseCSV(categoriesRaw), parseCSV(likesRaw));
+}
+
+function int(v) { return parseInt(v) || 0; }
+
+function compute(summary, articles, categories, likes) {
+  const latest = summary[summary.length - 1];
+  const prev = summary[summary.length - 2] || {};
+  const first = summary[0];
+
+  const totalPV = int(latest.total_pv);
+  const totalLike = int(latest.total_like);
+  const totalArt = int(latest.article_count);
+  const follower = int(latest.follower_count);
+  const prevPV = int(prev.total_pv);
+  const prevLike = int(prev.total_like);
+  const prevArt = int(prev.article_count);
+  const prevFollower = int(prev.follower_count);
+  const firstPV = int(first.total_pv);
+  const firstLike = int(first.total_like);
+
+  const pvGrowth = firstPV > 0 ? Math.round((totalPV - firstPV) / firstPV * 100) : 0;
+  const likeGrowth = firstLike > 0 ? Math.round((totalLike - firstLike) / firstLike * 100) : 0;
+  const eta = totalPV > 0 ? (totalLike / totalPV * 100).toFixed(2) : '0';
+
+  const latestDate = articles.reduce((a, b) => a.date > b.date ? a : b).date;
+  const latestArticles = articles.filter(r => r.date === latestDate);
+
+  const catMap = {};
+  categories.forEach(c => { catMap[c.key] = c; });
+
+  const catCounts = {};
+  CAT_ORDER.forEach(c => catCounts[c] = 0);
+  categories.forEach(c => { if (catCounts[c.category] !== undefined) catCounts[c.category]++; });
+
+  const catEtas = {};
+  CAT_ORDER.forEach(c => catEtas[c] = []);
+  latestArticles.forEach(a => {
+    const cat = catMap[a.key];
+    if (cat && int(a.read_count) > 0) {
+      catEtas[cat.category].push(int(a.like_count) / int(a.read_count));
+    }
+  });
+  const catEtaAvg = {};
+  CAT_ORDER.forEach(c => {
+    const arr = catEtas[c];
+    catEtaAvg[c] = arr.length > 0 ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
+  });
+
+  const top5PV = latestArticles.filter(r => int(r.read_count) > 0)
+    .sort((a, b) => int(b.read_count) - int(a.read_count)).slice(0, 5)
+    .map((r, i) => ({ rank: String(i+1).padStart(2,'0'), title: r.title.replace(/\|.*$/,'').slice(0,36), pv: int(r.read_count), cat: catMap[r.key]?.category || '?', key: r.key }));
+
+  const top5Like = latestArticles.filter(r => int(r.like_count) > 0)
+    .sort((a, b) => int(b.like_count) - int(a.like_count)).slice(0, 5)
+    .map((r, i) => ({ rank: String(i+1).padStart(2,'0'), title: r.title.replace(/\|.*$/,'').slice(0,36), likes: int(r.like_count), cat: catMap[r.key]?.category || '?', key: r.key }));
+
+  const top5Eta = latestArticles.filter(r => int(r.read_count) >= 30)
+    .map(r => ({...r, eta: int(r.like_count) / int(r.read_count)}))
+    .sort((a, b) => b.eta - a.eta).slice(0, 5)
+    .map((r, i) => ({ rank: String(i+1).padStart(2,'0'), title: r.title.replace(/\|.*$/,'').slice(0,36), eta: (r.eta*100).toFixed(1), cat: catMap[r.key]?.category || '?', key: r.key }));
+
+  const worst3 = latestArticles.filter(r => int(r.read_count) > 0)
+    .sort((a, b) => int(a.read_count) - int(b.read_count)).slice(0, 3)
+    .map((r, i) => ({ title: r.title.replace(/\|.*$/,'').slice(0,28), pv: int(r.read_count), cat: catMap[r.key]?.category || '?', key: r.key }));
+
+  const fanCounts = {}, fanNames = {};
+  likes.forEach(l => { const uid = l.like_user_id; if (!uid) return; fanCounts[uid] = (fanCounts[uid]||0)+1; fanNames[uid] = l.like_username; });
+  const topFans = Object.entries(fanCounts).sort((a,b) => b[1]-a[1]).slice(0,7)
+    .map(([uid, count], i) => ({ rank: i+1, name: fanNames[uid]||'unknown', count }));
+
+  const step = Math.max(1, Math.floor(summary.length / 16));
+  const growthChart = summary.filter((_,i) => i%step===0 || i===summary.length-1)
+    .map(r => ({ d: (r.date||'').replace('2026-','').replace('2025-',''), pv: int(r.total_pv), like: int(r.total_like), follower: int(r.follower_count) }));
+
+  // Journey milestones
+  const journeyArticles = categories
+    .filter(c => c.article_number && !['pre','intro','special'].includes(c.article_number))
+    .sort((a, b) => int(a.article_number) - int(b.article_number));
+  const journeyCount = journeyArticles.length;
+  const firstArticleDate = journeyArticles.length > 0 ? journeyArticles[0].published_date : '';
+  const lastArticleDate = journeyArticles.length > 0 ? journeyArticles[journeyArticles.length - 1].published_date : '';
+  const daysSinceStart = firstArticleDate && lastArticleDate
+    ? Math.floor((new Date(lastArticleDate) - new Date(firstArticleDate)) / 86400000) : 0;
+
+  // Build milestone events
+  const milestones = [];
+  if (journeyArticles.length > 0) milestones.push({ num: 1, title: journeyArticles[0].title.slice(0,30), date: journeyArticles[0].published_date, label: 'First Note' });
+  [10,20,30,50,70].forEach(n => {
+    const a = journeyArticles.find(c => int(c.article_number) === n);
+    if (a) milestones.push({ num: n, title: a.title.slice(0,30), date: a.published_date, label: `#${n}` });
+  });
+  if (journeyArticles.length > 1) {
+    const last = journeyArticles[journeyArticles.length - 1];
+    milestones.push({ num: int(last.article_number), title: last.title.slice(0,30), date: last.published_date, label: 'Latest' });
+  }
+
+  // 7-day trend
+  const allDates = [...new Set(articles.map(a => a.date))].sort();
+  const recent7 = allDates.slice(-7);
+  let rising = 0, cont = 0, slow = 0, stop = 0;
+  if (recent7.length >= 2) {
+    const oldSnap = {}, newSnap = {};
+    articles.forEach(a => {
+      if (a.date === recent7[0]) oldSnap[a.key] = int(a.read_count);
+      if (a.date === recent7[recent7.length-1]) newSnap[a.key] = int(a.read_count);
+    });
+    Object.keys(newSnap).forEach(key => {
+      const diff = newSnap[key] - (oldSnap[key]||0);
+      if (diff >= 20) rising++; else if (diff >= 5) cont++; else if (diff >= 1) slow++; else stop++;
+    });
+  }
+
+  // リライト候補: 減速中だがη高い記事
+  const rewriteCandidates = (() => {
+    if (recent7.length < 2) return [];
+    const oldSnap2 = {}, newSnap2 = {};
+    articles.forEach(a => {
+      if (a.date === recent7[0]) oldSnap2[a.key] = int(a.read_count);
+      if (a.date === recent7[recent7.length-1]) newSnap2[a.key] = int(a.read_count);
+    });
+    return latestArticles
+      .filter(r => {
+        const diff = (newSnap2[r.key]||0) - (oldSnap2[r.key]||0);
+        return diff >= 0 && diff <= 4 && int(r.read_count) >= 30;
+      })
+      .map(r => ({ ...r, eta: int(r.like_count) / int(r.read_count) }))
+      .sort((a, b) => b.eta - a.eta)
+      .slice(0, 3)
+      .map(r => ({ title: r.title.replace(/\|.*$/,'').slice(0,36), pv: int(r.read_count), eta: (r.eta*100).toFixed(1), cat: catMap[r.key]?.category || '?', key: r.key }));
+  })();
+
+  // 直近10本のカテゴリ偏り
+  const recent10cats = journeyArticles.slice(-10).map(c => c.category);
+  const recent10catCounts = {};
+  recent10cats.forEach(c => { recent10catCounts[c] = (recent10catCounts[c]||0)+1; });
+  const mostWrittenCat = Object.entries(recent10catCounts).sort((a,b) => b[1]-a[1])[0];
+  const leastWrittenCats = CAT_ORDER.filter(c => c !== 'F' && c !== 'G' && !recent10catCounts[c]);
+  const highEtaCat = CAT_ORDER.filter(c => catEtaAvg[c] > 0).sort((a,b) => catEtaAvg[b] - catEtaAvg[a])[0];
+
+  const tickerText = `PV ${totalPV.toLocaleString()} / Like ${totalLike.toLocaleString()} / eta ${eta}% / ${totalArt} articles / ${follower} followers / `;
+
+  return {
+    totalPV, totalLike, totalArt, follower,
+    pvDiff: totalPV - prevPV, likeDiff: totalLike - prevLike,
+    artDiff: totalArt - prevArt, followerDiff: follower - prevFollower,
+    pvGrowth, likeGrowth, eta,
+    top5PV, top5Like, top5Eta, worst3,
+    topFans, catCounts, catEtaAvg,
+    growthChart, tickerText,
+    rising, cont, slow, stop,
+    journeyCount, daysSinceStart,
+    firstArticleDate, lastArticleDate,
+    milestones,
+    rewriteCandidates,
+    mostWrittenCat, leastWrittenCats, highEtaCat,
+    updatedAt: latest.date,
+  };
+}
+
+function render(d) {
+  const PV_EMOJI = ['👑','🥈','🥉','🎖','🏅'];
+  const LIKE_EMOJI = ['💖','💗','💓','💞','💝'];
+  const ETA_EMOJI = ['⚡','🔥','✨','💡','🌟'];
+  const ROASTS = [
+    '...ねえ、本当に公開した？',
+    '存在は確認されている。それだけ。',
+    'まあ、実験データとしては優秀だよ。',
+  ];
+  const FAN_THANKS = [
+    'いつもありがとう。一番の読者だよ。',
+    'あなたのスキが、書く力になってます。',
+    '毎回読んでくれて、ほんとに嬉しい。',
+    '常連さん...照れる。',
+    'スキの通知、いつも見てるよ。',
+    'あなたがいるから、書き続けられる。',
+    'ありがとう。これからもよろしくね。',
+  ];
+
+  const total4 = d.rising + d.cont + d.slow + d.stop || 1;
+
+  const catBarHTML = CAT_ORDER.filter(c => d.catCounts[c] > 0)
+    .map(c => `<div style="width:${(d.catCounts[c]/d.totalArt*100).toFixed(1)}%;background:${CAT_COLORS[c]}" title="${c}(${CAT_NAMES[c]}): ${d.catCounts[c]}">${c}</div>`).join('');
+
+  const catEtaHTML = CAT_ORDER.filter(c => d.catEtaAvg[c] > 0)
+    .sort((a, b) => d.catEtaAvg[b] - d.catEtaAvg[a])
+    .map(c => {
+      const pct = (d.catEtaAvg[c]*100).toFixed(1);
+      const maxEta = Math.max(...CAT_ORDER.map(x => d.catEtaAvg[x]));
+      const barW = maxEta > 0 ? (d.catEtaAvg[c]/maxEta*100).toFixed(0) : 0;
+      return `
+        <div class="eta-item" style="margin-bottom:8px">
+          <div style="width:36px;height:36px;border-radius:50%;background:${CAT_COLORS[c]};display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;font-size:14px;flex-shrink:0">${c}</div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13px;font-weight:700;margin-bottom:4px">${CAT_NAMES[c]}<span style="color:${ACCENT};margin-left:8px">${pct}%</span></div>
+            <div style="height:6px;background:rgba(108,92,231,0.1);border-radius:3px;overflow:hidden">
+              <div style="height:100%;background:${CAT_COLORS[c]};width:${barW}%;border-radius:3px;transition:width 1s"></div>
+            </div>
+          </div>
+          <div style="font-family:var(--font-display);font-size:24px;color:${CAT_COLORS[c]};flex-shrink:0">${d.catCounts[c]}</div>
+        </div>`;
+    }).join('');
+
+  const chibiHTML = CHIBI_FILES.map((file, i) => `
+    <div class="chibi-card${i === TODAY_IDX ? ' today' : ''}">
+      <img src="images/chibi/chibi-${file}.webp" alt="${CHIBI_NAMES[i]}" loading="lazy">
+      <div style="font-size:13px;font-weight:900;margin-top:8px;color:${i === TODAY_IDX ? ACCENT : '#555'}">${CHIBI_NAMES[i]}</div>
+      <div style="font-size:9px;color:${i === TODAY_IDX ? ACCENT : '#bbb'};margin-top:2px">${DAYS_JA[i]}曜日</div>
+      ${i === TODAY_IDX ? '<div style="font-size:9px;color:'+ACCENT+';margin-top:4px;font-weight:700;letter-spacing:1px">TODAY</div>' : ''}
+    </div>`).join('');
+
+  const fansHTML = d.topFans.map((f, i) => `
+    <div class="fan-card" style="margin-bottom:12px">
+      <div style="font-family:var(--font-display);font-size:32px;color:${i === 0 ? PINK : '#ddd'};min-width:40px">${f.rank}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:14px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${f.name}</div>
+        <div style="font-size:11px;color:${PINK};margin-top:4px;font-style:italic">${FAN_THANKS[i]}</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-family:var(--font-display);font-size:28px;color:${PINK}">${f.count}</div>
+        <div style="font-size:9px;color:#999">articles</div>
+      </div>
+    </div>`).join('');
+
+  const milestonesHTML = d.milestones.map((m, i) => `
+    <div class="milestone">
+      <div class="milestone-dot${i === d.milestones.length - 1 ? '' : ' filled'}"></div>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:700;color:${CREAM}">${m.label} - ${m.title}</div>
+        <div style="font-size:11px;color:#ffffff44;margin-top:2px">${m.date || ''} / #${m.num}</div>
+      </div>
+    </div>`).join('');
+
+  document.getElementById('app').innerHTML = `
+
+    <!-- HERO -->
+    <section style="min-height:100svh;display:flex;flex-direction:column;background:${INK};color:${CREAM};position:relative;overflow:hidden">
+      <div style="position:absolute;inset:0;z-index:0">
+        <img src="images/eyes/eyes-${TODAY_FILE}.webp" alt="" style="width:100%;height:100%;object-fit:cover;object-position:center 20%;opacity:.35;filter:saturate(0.8);animation:breathe 6s ease-in-out infinite">
+      </div>
+      <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(10,10,20,0.5) 0%,rgba(10,10,20,0.85) 100%);z-index:0"></div>
+
+      <div style="padding:24px 32px;display:flex;justify-content:space-between;align-items:center;position:relative;z-index:1;border-bottom:1px solid #ffffff18">
+        <span style="font-family:var(--font-head);font-size:15px;font-weight:800;letter-spacing:1px">
+          <span style="color:${ACCENT}">ohayou</span><span style="color:#ffffff55"> kanojo</span>
+        </span>
+        <span style="font-family:var(--font-head);font-size:10px;letter-spacing:1px;color:#ffffff44">
+          ${nameWithReading(TODAY_IDX)} / ${d.updatedAt}
+        </span>
+      </div>
+
+      <div style="flex:1;display:flex;flex-direction:column;justify-content:center;padding:0 32px 48px;position:relative;z-index:1">
+        ${navi('hero', true)}
+        <div class="fu d1" style="font-family:var(--font-display);font-size:clamp(44px,11vw,120px);line-height:.88;letter-spacing:-2px;color:${CREAM}">
+          祈るな、<br><span style="color:${ACCENT}">設計しろ。</span>
+        </div>
+        <div class="fu d2" style="font-family:var(--font-head);font-size:clamp(12px,3vw,17px);color:#ffffff88;margin-top:20px;max-width:520;line-height:1.7">
+          ${d.totalArt} articles / ${d.daysSinceStart} days / navigator: ${TODAY_NAME}
+        </div>
+
+        <div class="fu d3 stat-row">
+          ${[
+            {n:d.totalPV.toLocaleString(), u:'Total PV', diff:d.pvDiff},
+            {n:d.totalLike.toLocaleString(), u:'Total Like', diff:d.likeDiff},
+            {n:d.follower.toLocaleString(), u:'Followers', diff:d.followerDiff},
+            {n:d.totalArt.toLocaleString(), u:'Articles', diff:d.artDiff},
+          ].map(k => `
+            <div>
+              <div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap">
+                <div style="font-family:var(--font-display);font-size:clamp(30px,7vw,60px);color:${ACCENT};line-height:1">${k.n}</div>
+                ${k.diff !== 0 ? `<div style="font-size:11px;color:${k.diff > 0 ? '#86efac' : '#fca5a5'};line-height:1">
+                  <span style="font-size:9px;opacity:.7;margin-right:3px">prev</span>${k.diff > 0 ? '+' + k.diff : k.diff}
+                </div>` : ''}
+              </div>
+              <div style="font-family:var(--font-head);font-size:10px;color:#ffffff55;letter-spacing:2px;margin-top:4px">${k.u}</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+      <div style="position:absolute;bottom:20px;left:50%;transform:translateX(-50%);font-family:var(--font-head);font-size:10px;letter-spacing:3px;color:#ffffff33">SCROLL</div>
+    </section>
+
+    <!-- FOLLOWER CHART -->
+    <section class="sec" style="background:${CREAM};padding:48px 32px">
+      <div style="max-width:900px;margin:0 auto">
+        <span class="badge" style="background:${PINK};color:#fff;margin-bottom:16px;display:inline-block">FOLLOWERS</span>
+        <h2 class="dc" style="font-family:var(--font-display);font-size:clamp(28px,7vw,64px);line-height:1;margin-bottom:24px">
+          フォロワーの軌跡
+        </h2>
+        <div class="chart-container">
+          <canvas id="chart-follower" height="180"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- CAST -->
+    <section class="sec" style="max-width:900px;margin:0 auto;text-align:center">
+      <span class="badge" style="background:${ACCENT};color:#fff;margin-bottom:16px">CAST</span>
+      <h2 class="dc" style="font-family:var(--font-display);font-size:clamp(38px,9vw,80px);line-height:.9;margin-top:12px">
+        7つの朝、7人の彼女
+      </h2>
+      <p style="margin-top:16px;font-size:14px;color:#5a3a6a;line-height:1.8">
+        毎朝、違う彼女がおはようを届ける。<br>
+        <span style="color:${ACCENT};font-weight:700">今日のナビゲーター: ${nameWithReading(TODAY_IDX)}</span>
+      </p>
+      <div class="chibi-grid">${chibiHTML}</div>
+    </section>
+
+    <!-- GROWTH -->
+    <section class="sec" style="max-width:900px;margin:0 auto">
+      ${navi('growth', false)}
+      <div class="growth-grid">
+        <div>
+          <span class="badge" style="background:${ACCENT};color:#fff;margin-bottom:16px">成長記録</span>
+          <h2 class="dc" style="font-family:var(--font-display);font-size:clamp(38px,9vw,80px);line-height:.9;margin-top:12px">
+            はじまりから今日まで<br><span style="color:${ACCENT}">+${d.pvGrowth}%</span>
+          </h2>
+          <p style="margin-top:20px;line-height:1.8;color:#5a3a6a;font-size:14px">
+            スキ成長率: <strong>+${d.likeGrowth}%</strong>
+            ${d.likeGrowth > d.pvGrowth ? '<br>スキ > PV。共鳴が勝っている。' : '<br>PVが先行。リーチ拡大中。'}
+          </p>
+          <div style="margin-top:24px;display:flex;gap:20px">
+            <div style="border-left:3px solid ${ACCENT};padding-left:12px">
+              <div style="font-family:var(--font-display);font-size:28px;color:${ACCENT}">+${d.likeGrowth}%</div>
+              <div style="font-size:11px;color:#999;letter-spacing:1px">スキ成長率</div>
+            </div>
+            <div style="border-left:3px solid #ccc;padding-left:12px">
+              <div style="font-family:var(--font-display);font-size:28px;color:${INK}">${d.eta}%</div>
+              <div style="font-size:11px;color:#999;letter-spacing:1px">平均 η</div>
+            </div>
+          </div>
+        </div>
+        <div class="chart-container">
+          <div style="font-size:11px;color:#999;letter-spacing:2px;margin-bottom:8px;font-family:var(--font-head)">累計PV推移</div>
+          <canvas id="chart-growth" height="180"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- CATEGORY -->
+    <section class="sec" style="background:#f5f0ff">
+      <div style="max-width:900px;margin:0 auto">
+        ${navi('category', false)}
+        <span class="badge" style="background:${INK};color:${CREAM};margin-bottom:16px">カテゴリ</span>
+        <h2 class="dc" style="font-family:var(--font-display);font-size:clamp(30px,8vw,64px);line-height:.9;margin-bottom:12px">
+          書いてきたものの<br>地図
+        </h2>
+        <p style="font-size:13px;color:#666;margin-bottom:24px">${d.totalArt}本の記事を A〜G に分類</p>
+        <div class="cat-bar">${catBarHTML}</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px">
+          ${CAT_ORDER.filter(c => d.catCounts[c] > 0).map(c =>
+            `<span style="font-size:11px;padding:4px 10px;border-radius:12px;background:${CAT_COLORS[c]}22;color:${CAT_COLORS[c]};font-weight:700">${c}: ${CAT_NAMES[c]} (${d.catCounts[c]})</span>`
+          ).join('')}
+        </div>
+      </div>
+    </section>
+
+    <!-- ETA by CATEGORY -->
+    <section class="sec" style="max-width:900px;margin:0 auto">
+      ${navi('eta', false)}
+      <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:36px;flex-wrap:wrap">
+        <span class="badge" style="background:${ACCENT};color:#fff">ETA RANKING</span>
+        <h2 class="dc" style="font-family:var(--font-display);font-size:clamp(28px,7vw,64px);line-height:1">カテゴリ別 スキ率通信簿</h2>
+      </div>
+      <p style="font-size:13px;color:#666;margin-bottom:24px;line-height:1.7">
+        仮説: A &gt; B &gt; C/D &gt; E。データは証明するか？
+      </p>
+      ${catEtaHTML}
+    </section>
+
+    <!-- HALL OF FAME -->
+    <section class="sec" style="background:${INK};color:${CREAM}">
+      <div style="max-width:900px;margin:0 auto">
+        ${navi('hallOfFame', true)}
+        <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:36px;flex-wrap:wrap">
+          <span class="badge" style="background:${ACCENT};color:#fff">HALL OF FAME</span>
+          <h2 class="dc-light" style="font-family:var(--font-display);font-size:clamp(28px,7vw,64px);line-height:1">読まれた記事たち</h2>
+        </div>
+        ${d.top5PV.map((a, i) => `
+          <div style="display:flex;align-items:center;gap:20px;padding:20px 0;border-bottom:1px solid #ffffff18">
+            <div style="font-family:var(--font-display);font-size:clamp(32px,5vw,56px);min-width:60px;color:${i===0?ACCENT:'#ffffff22'};line-height:1">${a.rank}</div>
+            <div style="font-size:18px;flex-shrink:0">${PV_EMOJI[i]}</div>
+            <div style="flex:1;min-width:0">
+              <a href="${noteURL(a.key)}" target="_blank" style="font-size:14px;font-weight:700;color:${i===0?ACCENT:CREAM};line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block;text-decoration:none" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${a.title}</a>
+              <div style="font-size:10px;color:#ffffff44;margin-top:4px">${a.cat}(${CAT_NAMES[a.cat]||'?'})</div>
+            </div>
+            <div style="text-align:right;flex-shrink:0">
+              <div style="font-family:var(--font-display);font-size:28px;color:${i===0?ACCENT:CREAM}">${a.pv.toLocaleString()}</div>
+              <div style="font-size:10px;color:#ffffff33;letter-spacing:1px">PV</div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </section>
+
+    <!-- LIKE RANKING -->
+    <section class="sec" style="background:#0e0a18;color:${CREAM};border-top:1px solid #ffffff0a">
+      <div style="max-width:900px;margin:0 auto">
+        <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:36px;flex-wrap:wrap">
+          <span class="badge" style="background:${PINK}44;color:${PINK}">スキ</span>
+          <h2 class="dc-light" style="font-family:var(--font-display);font-size:clamp(28px,7vw,64px);line-height:1">愛された記事たち</h2>
+        </div>
+        ${d.top5Like.map((a, i) => `
+          <div style="display:flex;align-items:center;gap:20px;padding:20px 0;border-bottom:1px solid #ffffff18">
+            <div style="font-family:var(--font-display);font-size:clamp(32px,5vw,56px);min-width:60px;color:${i===0?PINK:'#ffffff22'};line-height:1">${a.rank}</div>
+            <div style="font-size:18px;flex-shrink:0">${LIKE_EMOJI[i]}</div>
+            <div style="flex:1;min-width:0">
+              <a href="${noteURL(a.key)}" target="_blank" style="font-size:14px;font-weight:700;color:${i===0?PINK:CREAM};line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block;text-decoration:none" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${a.title}</a>
+              <div style="font-size:10px;color:#ffffff44;margin-top:4px">${a.cat}(${CAT_NAMES[a.cat]||'?'})</div>
+            </div>
+            <div style="text-align:right;flex-shrink:0">
+              <div style="font-family:var(--font-display);font-size:28px;color:${i===0?PINK:CREAM}">${a.likes.toLocaleString()}</div>
+              <div style="font-size:10px;color:#ffffff33;letter-spacing:1px">LIKE</div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </section>
+
+    <!-- ETA Champions -->
+    <section class="sec" style="background:#080e14;color:${CREAM};border-top:1px solid #ffffff0a">
+      <div style="max-width:900px;margin:0 auto">
+        ${navi('eta', true)}
+        <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:36px;flex-wrap:wrap">
+          <span class="badge" style="background:${CYAN}44;color:${CYAN}">QUALITY</span>
+          <h2 class="dc-light" style="font-family:var(--font-display);font-size:clamp(28px,7vw,64px);line-height:1">心に刺さった記事たち</h2>
+        </div>
+        <p style="font-size:12px;color:#ffffff55;margin-bottom:24px">η = スキ / PV。高いほど、読者の心に残った記事。</p>
+        ${d.top5Eta.map((a, i) => `
+          <div style="display:flex;align-items:center;gap:20px;padding:20px 0;border-bottom:1px solid #ffffff18">
+            <div style="font-family:var(--font-display);font-size:clamp(32px,5vw,56px);min-width:60px;color:${i===0?CYAN:'#ffffff22'};line-height:1">${a.rank}</div>
+            <div style="font-size:18px;flex-shrink:0">${ETA_EMOJI[i]}</div>
+            <div style="flex:1;min-width:0">
+              <a href="${noteURL(a.key)}" target="_blank" style="font-size:14px;font-weight:700;color:${i===0?CYAN:CREAM};line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block;text-decoration:none" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${a.title}</a>
+              <div style="font-size:10px;color:#ffffff44;margin-top:4px">${a.cat}(${CAT_NAMES[a.cat]||'?'})</div>
+            </div>
+            <div style="text-align:right;flex-shrink:0">
+              <div style="font-family:var(--font-display);font-size:28px;color:${i===0?CYAN:CREAM}">${a.eta}%</div>
+              <div style="font-size:10px;color:#ffffff33;letter-spacing:1px">ETA</div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </section>
+
+    <!-- FANS -->
+    <section class="sec" style="background:${CREAM}">
+      <div style="max-width:900px;margin:0 auto">
+        ${navi('fans', false)}
+        <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:12px;flex-wrap:wrap">
+          <span class="badge" style="background:${PINK};color:#fff">YOUR FANS</span>
+          <h2 class="dc" style="font-family:var(--font-display);font-size:clamp(28px,7vw,64px);line-height:1">いつもスキしてくれる人</h2>
+        </div>
+        <p style="font-size:13px;color:#666;margin-bottom:28px;line-height:1.7">
+          何度もスキを届けてくれた、大切な読者。
+        </p>
+        ${fansHTML}
+      </div>
+    </section>
+
+    <!-- HALL OF SHAME -->
+    <section class="sec" style="background:${INK};color:${CREAM};border-top:1px solid #ffffff0a">
+      <div style="max-width:900px;margin:0 auto">
+        ${navi('hallOfShame', true)}
+        <span class="badge" style="background:#ffffff22;color:${CREAM};margin-bottom:12px;display:inline-block">HALL OF SHAME</span>
+        <h2 class="dc-light" style="font-family:var(--font-display);font-size:clamp(38px,10vw,80px);line-height:.88;margin-bottom:8px">
+          読まれなかった記事<br>
+          <span style="color:#ffffff44;font-size:70%">も、データ。</span>
+        </h2>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:32px">
+          ${d.worst3.map((w, i) => `
+            <div class="worst-card" style="background:#ffffff0d;border:1px solid #ffffff18">
+              <div style="margin-bottom:10px">
+                <img src="images/chibi/chibi-${['mon','tue','wed','thu','fri','sat','sun'][(TODAY_IDX + i + 1) % 7]}.webp" alt="" style="width:56px;height:56px;object-fit:contain;filter:grayscale(.3) brightness(.9);opacity:.75;transform:rotate(${[-90,8,-6][i]}deg) scale(.9);transition:all .3s">
+              </div>
+              <a href="${noteURL(w.key)}" target="_blank" style="font-family:var(--font-head);font-weight:700;font-size:13px;line-height:1.3;margin-bottom:8px;color:${CREAM};display:block;text-decoration:none" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${w.title}</a>
+              <div style="font-family:var(--font-display);font-size:36px;color:${ACCENT};line-height:1">${w.pv} PV</div>
+              <div style="margin-top:10px;font-size:11px;color:#ffffff44">${w.cat}(${CAT_NAMES[w.cat]||'?'})</div>
+              <div style="margin-top:10px;font-size:11px;color:#ffffff55;font-style:italic">${ROASTS[i]}</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    </section>
+
+    <!-- TREND -->
+    <section class="sec" style="background:#f5f0ff">
+      <div style="max-width:900px;margin:0 auto">
+        <span class="badge" style="background:${INK};color:${CREAM};margin-bottom:16px;display:inline-block">STATUS</span>
+        <h2 class="dc" style="font-family:var(--font-display);font-size:clamp(30px,8vw,64px);line-height:.9;margin-bottom:36px">
+          7日間の<br>いま
+        </h2>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          ${[
+            {s:'上昇中',n:d.rising,desc:'7日間でPV +20。アルゴリズムの追い風。',c:RED,bg:RED+'18'},
+            {s:'安定',n:d.cont,desc:'堅実に読まれている。ロングテール候補。',c:GREEN,bg:GREEN+'18'},
+            {s:'減速',n:d.slow,desc:'下降中だが生きている。リライト候補。',c:'#e17055',bg:'#e1705518'},
+            {s:'休眠',n:d.stop,desc:'7日間読まれていない。アーカイブ行き。',c:'#64748b',bg:'#64748b18'},
+          ].map(s => `
+            <div style="background:${s.bg};border:2px solid ${s.c}66;border-radius:16px;padding:24px">
+              <div style="font-family:var(--font-head);font-size:11px;letter-spacing:2px;color:${s.c};font-weight:700;margin-bottom:8px">${s.s}</div>
+              <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:8px">
+                <span style="font-family:var(--font-display);font-size:52px;color:${s.c};line-height:1">${s.n}</span>
+                <span style="font-size:14px;color:${s.c};font-weight:700">本</span>
+                <span style="font-size:12px;color:#999;margin-left:auto">${Math.round(s.n/total4*100)}%</span>
+              </div>
+              <div style="height:4px;background:${s.c}22;border-radius:2px;margin-bottom:10px;overflow:hidden">
+                <div style="height:100%;background:${s.c};width:${Math.round(s.n/total4*100)}%;border-radius:2px;transition:width .8s"></div>
+              </div>
+              <p style="font-size:12px;color:#5a3a6a;line-height:1.6">${s.desc}</p>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    </section>
+
+    <!-- JOURNEY -->
+    <section class="sec" style="background:${INK};color:${CREAM}">
+      <div style="max-width:900px;margin:0 auto">
+        ${navi('journey', true)}
+        <span class="badge" style="background:${ACCENT};color:#fff;margin-bottom:16px">JOURNEY</span>
+        <h2 class="dc-light" style="font-family:var(--font-display);font-size:clamp(44px,12vw,110px);line-height:.85;margin-bottom:24px">
+          彼女との<br><span style="color:${ACCENT}">軌跡</span>
+        </h2>
+        <p style="font-size:14px;color:#ffffff55;margin-bottom:32px;line-height:1.8">
+          ${d.firstArticleDate} - ${d.lastArticleDate}
+        </p>
+
+        <div style="border-left:2px solid ${ACCENT}33;padding-left:24px;margin-left:5px">
+          ${milestonesHTML}
+        </div>
+      </div>
+    </section>
+
+    <!-- ACTION -->
+    <section class="sec" style="background:${CREAM}">
+      <div style="max-width:900px;margin:0 auto">
+        ${navi('action', false)}
+        <span class="badge" style="background:${ACCENT};color:#fff;margin-bottom:16px;display:inline-block">NEXT ACTION</span>
+        <h2 class="dc" style="font-family:var(--font-display);font-size:clamp(30px,8vw,64px);line-height:.9;margin-bottom:32px">
+          次の一手
+        </h2>
+
+        <div style="display:grid;gap:20px">
+          ${d.rewriteCandidates.length > 0 ? `
+          <div style="background:#fff;border:2px solid ${ACCENT}33;border-radius:16px;padding:24px">
+            <div style="font-family:var(--font-head);font-size:12px;letter-spacing:2px;color:${ACCENT};font-weight:700;margin-bottom:16px">リライト候補</div>
+            <p style="font-size:12px;color:#666;margin-bottom:16px;line-height:1.6">η(スキ率)は高いのにPVが減速中。リライトやXでのシェアで復活するかも。</p>
+            ${d.rewriteCandidates.map(r => `
+              <div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid #f0ecff">
+                <div style="font-size:20px">📝</div>
+                <div style="flex:1;min-width:0">
+                  <a href="${noteURL(r.key)}" target="_blank" style="font-size:13px;font-weight:700;color:${INK};text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">${r.title}</a>
+                  <div style="font-size:10px;color:#999;margin-top:2px">${r.cat}(${CAT_NAMES[r.cat]||'?'}) / η ${r.eta}% / ${r.pv} PV</div>
+                </div>
+              </div>
+            `).join('')}
+          </div>` : ''}
+
+          <div style="background:#fff;border:2px solid ${ACCENT}33;border-radius:16px;padding:24px">
+            <div style="font-family:var(--font-head);font-size:12px;letter-spacing:2px;color:${ACCENT};font-weight:700;margin-bottom:16px">カテゴリバランス</div>
+            <p style="font-size:13px;color:${INK};line-height:1.8">
+              直近10本で最も多いカテゴリ: <strong style="color:${ACCENT}">${d.mostWrittenCat ? d.mostWrittenCat[0] + '(' + (CAT_NAMES[d.mostWrittenCat[0]]||'?') + ') × ' + d.mostWrittenCat[1] + '本' : '—'}</strong>
+              ${d.leastWrittenCats.length > 0 ? '<br>最近書いていない: <strong>' + d.leastWrittenCats.map(c => c + '(' + (CAT_NAMES[c]||'?') + ')').join(', ') + '</strong>' : ''}
+              ${d.highEtaCat ? '<br>η最高カテゴリ: <strong style="color:' + ACCENT + '">' + d.highEtaCat + '(' + (CAT_NAMES[d.highEtaCat]||'?') + ')</strong> → 次に書くと刺さるかも' : ''}
+            </p>
+          </div>
+
+          ${d.top5Eta.length > 0 ? `
+          <div style="background:#fff;border:2px solid ${PINK}33;border-radius:16px;padding:24px">
+            <div style="font-family:var(--font-head);font-size:12px;letter-spacing:2px;color:${PINK};font-weight:700;margin-bottom:16px">Xでシェアすべき記事</div>
+            <p style="font-size:12px;color:#666;margin-bottom:16px;line-height:1.6">η上位 = 読めば刺さる記事。まだ届いていない人に届けよう。</p>
+            <a href="${noteURL(d.top5Eta[0].key)}" target="_blank" style="display:flex;align-items:center;gap:12px;padding:12px;background:${PINK}08;border-radius:12px;text-decoration:none">
+              <div style="font-size:20px">🔗</div>
+              <div style="flex:1;min-width:0">
+                <div style="font-size:13px;font-weight:700;color:${INK};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d.top5Eta[0].title}</div>
+                <div style="font-size:10px;color:#999;margin-top:2px">η ${d.top5Eta[0].eta}% — 最も心に残った記事</div>
+              </div>
+            </a>
+          </div>` : ''}
+        </div>
+      </div>
+    </section>
+
+    <!-- FOOTER -->
+    <section class="sec" style="background:${INK};color:${CREAM};padding-bottom:60px;text-align:center;border-top:1px solid #ffffff0a">
+      <div style="width:100%;max-width:480px;margin:0 auto 32px;position:relative;overflow:hidden">
+        <img src="images/eyes/eyes-${TODAY_FILE}.webp" alt="${TODAY_NAME}" style="width:100%;display:block;object-fit:cover">
+        <div style="position:absolute;inset:0;background:linear-gradient(180deg,${INK} 0%,transparent 30%,transparent 70%,${INK} 100%);pointer-events:none"></div>
+      </div>
+      <div style="font-family:var(--font-display);font-size:clamp(44px,13vw,110px);line-height:.85;margin-bottom:20px">
+        観測は、<br><span style="color:${ACCENT}">続く。</span>
+      </div>
+      <p style="font-size:14px;color:#ffffff55;max-width:460px;margin:0 auto;line-height:1.8">
+        成果ではなく、判断を残す。<br>
+        明日の朝も、彼女はおはようと言う。
+      </p>
+      <div style="margin-top:36px;font-size:11px;font-family:var(--font-head);letter-spacing:3px;color:#ffffff33;border-bottom:1px solid #ffffff22;padding-bottom:6px;display:inline-block">
+        wrapped by ${nameWithReading(TODAY_IDX)} / ${d.updatedAt} / hasyamo
+      </div>
+    </section>
+  `;
+
+  buildGrowthChart(d.growthChart);
+  buildFollowerChart(d.growthChart);
+}
+
+function buildGrowthChart(data) {
+  const canvas = document.getElementById('chart-growth');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.parentElement.clientWidth - 32;
+  const H = 180;
+  canvas.width = W * 2; canvas.height = H * 2;
+  canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
+  ctx.scale(2, 2);
+
+  const pvs = data.map(d => d.pv);
+  const maxPV = Math.max(...pvs);
+  const minPV = Math.min(...pvs);
+  const range = maxPV - minPV || 1;
+  const pad = {t: 10, b: 30, l: 40, r: 10};
+  const cw = W - pad.l - pad.r;
+  const ch = H - pad.t - pad.b;
+
+  ctx.strokeStyle = '#e8e0f0'; ctx.lineWidth = 0.5;
+  for (let i = 0; i <= 4; i++) {
+    const y = pad.t + ch * i / 4;
+    ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(W - pad.r, y); ctx.stroke();
+    ctx.fillStyle = '#999'; ctx.font = '10px sans-serif'; ctx.textAlign = 'right';
+    ctx.fillText(Math.round((maxPV - range * i / 4) / 1000) + 'K', pad.l - 4, y + 4);
+  }
+  ctx.fillStyle = '#999'; ctx.font = '9px sans-serif'; ctx.textAlign = 'center';
+  const labelStep = Math.max(1, Math.floor(data.length / 6));
+  data.forEach((d, i) => {
+    if (i % labelStep === 0 || i === data.length - 1) {
+      ctx.fillText(d.d, pad.l + cw * i / (data.length - 1), H - 8);
+    }
+  });
+
+  ctx.beginPath();
+  data.forEach((d, i) => {
+    const x = pad.l + cw * i / (data.length - 1);
+    const y = pad.t + ch * (1 - (d.pv - minPV) / range);
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.lineTo(pad.l + cw, pad.t + ch); ctx.lineTo(pad.l, pad.t + ch); ctx.closePath();
+  const grad = ctx.createLinearGradient(0, pad.t, 0, pad.t + ch);
+  grad.addColorStop(0, 'rgba(108,92,231,0.2)'); grad.addColorStop(1, 'rgba(108,92,231,0.02)');
+  ctx.fillStyle = grad; ctx.fill();
+
+  ctx.beginPath();
+  data.forEach((d, i) => {
+    const x = pad.l + cw * i / (data.length - 1);
+    const y = pad.t + ch * (1 - (d.pv - minPV) / range);
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.strokeStyle = ACCENT; ctx.lineWidth = 2.5; ctx.lineJoin = 'round'; ctx.stroke();
+
+  const lx = pad.l + cw;
+  const ly = pad.t + ch * (1 - (data[data.length-1].pv - minPV) / range);
+  ctx.beginPath(); ctx.arc(lx, ly, 4, 0, Math.PI * 2); ctx.fillStyle = ACCENT; ctx.fill();
+}
+
+function buildFollowerChart(data) {
+  const canvas = document.getElementById('chart-follower');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.parentElement.clientWidth - 32;
+  const H = 180;
+  canvas.width = W * 2; canvas.height = H * 2;
+  canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
+  ctx.scale(2, 2);
+
+  const vals = data.map(d => d.follower);
+  const maxV = Math.max(...vals);
+  const minV = Math.min(...vals);
+  const range = maxV - minV || 1;
+  const pad = {t: 10, b: 30, l: 40, r: 10};
+  const cw = W - pad.l - pad.r;
+  const ch = H - pad.t - pad.b;
+
+  ctx.strokeStyle = '#e8e0f0'; ctx.lineWidth = 0.5;
+  for (let i = 0; i <= 4; i++) {
+    const y = pad.t + ch * i / 4;
+    ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(W - pad.r, y); ctx.stroke();
+    ctx.fillStyle = '#999'; ctx.font = '10px sans-serif'; ctx.textAlign = 'right';
+    ctx.fillText(Math.round(maxV - range * i / 4), pad.l - 4, y + 4);
+  }
+  ctx.fillStyle = '#999'; ctx.font = '9px sans-serif'; ctx.textAlign = 'center';
+  const labelStep = Math.max(1, Math.floor(data.length / 6));
+  data.forEach((d, i) => {
+    if (i % labelStep === 0 || i === data.length - 1) {
+      ctx.fillText(d.d, pad.l + cw * i / (data.length - 1), H - 8);
+    }
+  });
+
+  ctx.beginPath();
+  data.forEach((d, i) => {
+    const x = pad.l + cw * i / (data.length - 1);
+    const y = pad.t + ch * (1 - (d.follower - minV) / range);
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.lineTo(pad.l + cw, pad.t + ch); ctx.lineTo(pad.l, pad.t + ch); ctx.closePath();
+  const grad = ctx.createLinearGradient(0, pad.t, 0, pad.t + ch);
+  grad.addColorStop(0, 'rgba(253,121,168,0.25)'); grad.addColorStop(1, 'rgba(253,121,168,0.02)');
+  ctx.fillStyle = grad; ctx.fill();
+
+  ctx.beginPath();
+  data.forEach((d, i) => {
+    const x = pad.l + cw * i / (data.length - 1);
+    const y = pad.t + ch * (1 - (d.follower - minV) / range);
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.strokeStyle = PINK; ctx.lineWidth = 2.5; ctx.lineJoin = 'round'; ctx.stroke();
+
+  const lx = pad.l + cw;
+  const ly = pad.t + ch * (1 - (data[data.length-1].follower - minV) / range);
+  ctx.beginPath(); ctx.arc(lx, ly, 4, 0, Math.PI * 2); ctx.fillStyle = PINK; ctx.fill();
+}
+
+loadData().then(render).catch(e => {
+  document.getElementById('app').innerHTML = `
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;gap:12px;padding:24px;text-align:center">
+      <div style="font-size:32px">x</div>
+      <div style="font-size:14px;color:#666">CSV load failed</div>
+      <div style="font-size:11px;color:#999">${e.message}</div>
+    </div>`;
+});
+</script>
+</body>
+</html>
