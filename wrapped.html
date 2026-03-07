@@ -238,6 +238,15 @@ const GIRL_LINES = {
     'のんびり見てるけど...これ、結構すごいことしてるよね。',
     'まあ、焦らなくていいんですよ。この成長カーブ、素敵です。',
   ],
+  like: [
+    'スキの数は、読者が「もう一歩踏み込んだ」証拠。大事な指標だよ。',
+    'スキいっぱい！みんなの気持ちが詰まってるね！',
+    'スキを押してくれた人たち...一人一人の気持ちだね。',
+    '...スキが多いのは、まあ、いい記事だったってことでしょ。',
+    'スキがいっぱいの記事！愛されてるー！',
+    'スキって、嬉しいよね～。ほっこりする。',
+    'スキを押してくださった方々の想い、大切にしたいですね。',
+  ],
   hallOfFame: [
     'この結果は、丁寧に書いた記事への正当な評価だと思うよ。',
     'ランキング発表～！ジャジャーン！どれもいい記事だよね！',
@@ -305,8 +314,53 @@ const GIRL_LINES = {
 
 function noteURL(key) { return 'https://note.com/hasyamo/n/' + key; }
 
+let _renderData = null;
+
 function getGirlLine(section) {
-  return GIRL_LINES[section][TODAY_IDX];
+  const d = _renderData;
+  if (!d) return GIRL_LINES[section][TODAY_IDX];
+  const i = TODAY_IDX;
+
+  // データ連動セリフ
+  // 月子(i=0)だけが数値を語る。他のキャラは性格に沿った感情的反応。
+  // 順番: [月子, 陽, しずく, 凛華, るな, まひる, 日和]
+  const dynamic = {
+    growth: () => {
+      if (d.pvGrowth >= 200) return [`PV成長率${d.pvGrowth}%。設計が正しかった証拠だね。`,'なんかすっごい伸びてない！？嬉しい！','こんなに伸びてる...みんなに届いてるんだね。','...ちょっと、これ結構すごいんじゃないの。','やばーい！めっちゃ伸びてるじゃん！','ふわぁ...なんかすごいことになってるね～。','こんなに成長していたんですね。嬉しいですね。'][i];
+      if (d.pvGrowth >= 100) return [`PV成長率${d.pvGrowth}%。倍以上に成長してるね。`,'おー！けっこう伸びてるよ！いい感じ！','ゆっくりだけど、ちゃんと大きくなってるね。','ふーん...まあ悪くないんじゃない。','いい感じに伸びてるね～！','のんびりでも、ちゃんと育ってるね～。','着実に成長していますね。素敵です。'][i];
+      if (d.likeGrowth > d.pvGrowth) return [`スキの伸びがPVを上回ってる。η上昇は記事の質が上がった証拠だよ。`,'なんかスキがたくさん！みんな好きって言ってくれてるよ！','スキが増えてる...あったかい気持ちになるね。','...スキが多いわね。まあ、いい記事書いてたし。','スキいっぱい！愛されてるね～！','スキが増えてる...いいことだね～。','スキが増えていますね。読者の方の気持ちが伝わってきます。'][i];
+      return null;
+    },
+    hallOfFame: () => {
+      if (d.top5PV.length > 0 && parseInt(d.top5PV[0].pv) >= 1000) return [`1位が${d.top5PV[0].pv.toLocaleString()}PV。1000超えは一つの壁を越えた証だね。`,'わーい！めっちゃ読まれてるじゃん！すごい！','たくさんの人に届いてるんだね...嬉しいな。','...ふん、まあ当然の結果よ。いい記事だったし。','すごーい！大人気じゃん！','ほぇ～、よく読まれてるねぇ。','たくさんの方に読んでいただけて、ありがたいですね。'][i];
+      return null;
+    },
+    hallOfShame: () => {
+      if (d.worst3.length > 0 && d.worst3[0].pv <= 10) return [`最下位は${d.worst3[0].pv}PV。でも、リリースしなければ観測データはゼロだった。`,'まあこういうのもあるよ！次があるじゃん！','読まれなくても、書いたこと自体に意味はあるから...。','べつに気にすることないでしょ。...次、頑張りなさいよ。','ドンマイドンマイ！次いこ次！','まあまあ、そんな日もあるよ～。','大丈夫ですよ。すべてが大切な経験です。'][i];
+      return null;
+    },
+    fans: () => {
+      if (d.topFans.length > 0 && d.topFans[0].count >= 20) return [`${d.topFans[0].name}さんが${d.topFans[0].count}回。リピート率から見て、確実にコアファンだね。`,'こんなに何回も来てくれる人がいるの！？嬉しすぎ！','何度も読みに来てくれるって...あったかいね。','...そんなに読んでくれてるの。べつに感動してないけど。','常連さんだ！ありがとーって伝えたいね！','何度も来てくれるって、嬉しいねぇ。','何度も足を運んでくださる方がいるんですね。ありがたいです。'][i];
+      return null;
+    },
+    eta: () => {
+      if (d.top5Eta.length > 0 && parseFloat(d.top5Eta[0].eta) >= 15) return [`η${d.top5Eta[0].eta}%。読者の${Math.round(100/parseFloat(d.top5Eta[0].eta))}人に1人がスキしてる。高い共鳴率だね。`,'めっちゃ心に刺さってるってことだよね！すごーい！','読んでくれた人の心に、ちゃんと届いてるんだね...。','...まあ、いい記事だったってことでしょ。認めるわ。','刺さる記事だー！キラキラしてる！','いい記事書いてるんだねぇ、すごいなぁ。','読者の方の心に深く届いているんですね。素敵です。'][i];
+      return null;
+    },
+    action: () => {
+      if (d.rewriteCandidates.length >= 3) return ['リライト候補が3本。週末の「一つだけ壊す」対象を選ぼう。','やることいっぱいだね！どれからやる？','やれることがある...一つずつ、ゆっくりね。','候補が揃ってるでしょ。さっさと選びなさいよ。','いっぱいある！ワクワクするね！','いくつかあるねぇ...のんびり選ぼっか。','いくつか候補がありますね。一つずつ向き合いましょう。'][i];
+      if (d.rewriteCandidates.length === 0) return ['リライト候補がゼロ。今は新しい記事を書くフェーズだね。','新しいの書こ！まっさらなキャンバスだよ！','今は新しいものを生み出す時間だね...。','候補がないなら新しいの書きなさいよ。待ってないけど。','新しいの書けるチャンスだね！','なーんもないし、新しいの書く～？','新しい記事に集中できる時ですね。'][i];
+      return null;
+    },
+    journey: () => {
+      if (d.journeyCount >= 100) return [`${d.journeyCount}本。100本超えは統計的にも有意なデータ量だよ。`,'100本超え！？すごーい！お祝いだよ！','100本...ここまで歩いてきたんだね。感慨深い。','100本超え...やるじゃない。ちょっとだけ見直したわ。','100本おめでとー！！パーティーだね！','100本かぁ...のんびり続けてたら来ちゃったね～。','100本を超えましたね。一つ一つが大切な記録です。'][i];
+      if (d.daysSinceStart >= 90) return [`${d.daysSinceStart}日。3ヶ月超えの継続率は、設計が機能している証拠だね。`,'3ヶ月以上続いてる！すごい！えらい！','3ヶ月以上...ずっと続けてきたんだね。','3ヶ月？...ふん、まあ続いてるわね。','3ヶ月突破～！やったね！','3ヶ月かぁ...気づいたらここまで来てたね～。','3ヶ月を超えましたね。丁寧に歩んでこられた道のりです。'][i];
+      return null;
+    },
+  };
+
+  const fn = dynamic[section];
+  return (fn && fn()) || GIRL_LINES[section][TODAY_IDX];
 }
 
 // Navigator component HTML
@@ -505,6 +559,7 @@ function compute(summary, articles, categories, likes) {
 }
 
 function render(d) {
+  _renderData = d;
   const PV_EMOJI = ['👑','🥈','🥉','🎖','🏅'];
   const LIKE_EMOJI = ['💖','💗','💓','💞','💝'];
   const ETA_EMOJI = ['⚡','🔥','✨','💡','🌟'];
@@ -745,6 +800,7 @@ function render(d) {
     <!-- LIKE RANKING -->
     <section class="sec" style="background:#0e0a18;color:${CREAM};border-top:1px solid #ffffff0a">
       <div style="max-width:900px;margin:0 auto">
+        ${navi('like', true)}
         <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:36px;flex-wrap:wrap">
           <span class="badge" style="background:${PINK}44;color:${PINK}">スキ</span>
           <h2 class="dc-light" style="font-family:var(--font-display);font-size:clamp(28px,7vw,64px);line-height:1">愛された記事たち</h2>
