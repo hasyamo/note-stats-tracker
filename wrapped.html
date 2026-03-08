@@ -183,6 +183,7 @@ body{
   </div>
 </div>
 
+<script src="girl-lines.js?v=1"></script>
 <script>
 const INK = '#0a0a14';
 const CREAM = '#fffbf2';
@@ -219,148 +220,28 @@ const CAT_ORDER = ['A','B','C','D','E','F','G'];
 // るな: 活発で明るい、ワクワク感
 // まひる: リラックス、穏やか、ゆったり
 // 日和: おっとり癒し系お姉さん、丁寧で優しい
-const GIRL_LINES = {
-  hero: [
-    'おはよう。今日のデータ、整理しておいたよ。一緒に見よう。',
-    'おっはよー！今日もデータ盛りだくさんだよ！見てみて！',
-    'おはよう...ふふ、今日のデータ、穏やかに見ていこうね。',
-    'おはよ。...べつに、データまとめたわけじゃないし。ほら、早く見なさいよ。',
-    'おっはよー！金曜だよ！今週のデータ、ワクワクしない？',
-    'おはよ～...ゆっくり起きた？データ、のんびり見よっか。',
-    'おはようございます。新しい週のはじまりに、データを振り返ってみましょうね。',
-  ],
-  growth: [
-    '着実に積み上がってるね。継続の力って、やっぱりすごい。',
-    'えっ、この成長率すごくない！？めっちゃ伸びてるじゃん！',
-    'ゆっくりだけど、ちゃんと伸びてるね...安心する。',
-    'ふーん、まあまあじゃない。...って、結構すごいんだけど。',
-    'うわー、右肩上がり！この勢いで週末突入だね！',
-    'のんびり見てるけど...これ、結構すごいことしてるよね。',
-    'まあ、焦らなくていいんですよ。この成長カーブ、素敵です。',
-  ],
-  like: [
-    'スキの数は、読者が「もう一歩踏み込んだ」証拠。大事な指標だよ。',
-    'スキいっぱい！みんなの気持ちが詰まってるね！',
-    'スキを押してくれた人たち...一人一人の気持ちだね。',
-    '...スキが多いのは、まあ、いい記事だったってことでしょ。',
-    'スキがいっぱいの記事！愛されてるー！',
-    'スキって、嬉しいよね～。ほっこりする。',
-    'スキを押してくださった方々の想い、大切にしたいですね。',
-  ],
-  hallOfFame: [
-    'この結果は、丁寧に書いた記事への正当な評価だと思うよ。',
-    'ランキング発表～！ジャジャーン！どれもいい記事だよね！',
-    'よく読まれた記事たち...嬉しいね、ほんとに。',
-    '...まあ、当然の結果でしょ。いい記事書いてたし。',
-    'きゃー！ベスト記事、今週もキラキラしてるね！',
-    'ふふ、人気記事って何回見ても飽きないよね～。',
-    'どの記事も、読者の方の大切な時間をいただいたもの。ありがたいですね。',
-  ],
-  hallOfShame: [
-    '失敗のデータも、次に活かせる貴重な情報だから。大丈夫。',
-    'あはは、まあこういうのもあるよ！ドンマイドンマイ！',
-    '...読まれなくても、書いたこと自体に意味はあるから。',
-    'べ、べつに慰めてるわけじゃないけど...次があるでしょ。',
-    'ワーストでも気にしない！次で巻き返しちゃおう！',
-    'まあまあ、こういう日もあるよ～。お茶でも飲も？',
-    '失敗も含めて、全部あなたの大切な記録ですよ。',
-  ],
-  fans: [
-    'こうして応援してくれる人がいること、大切にしたいね。',
-    'すごい！こんなに常連さんいるんだ！みんなありがとー！',
-    'いつも読んでくれる人たち...あったかい気持ちになるね。',
-    'べつに感動とかしてないけど...ちゃんと感謝しときなさいよ。',
-    'ファンの人たちのスキ、めっちゃ嬉しいよね！',
-    'スキの通知が来るたび、つながりを感じるよね。',
-    '読者の皆さまのおかげで、ここまで来られたんですね。',
-  ],
-  eta: [
-    'スキ率は記事の質を測る重要な指標。しっかり見ていこう。',
-    'スキ率チェック！数字で見ると面白いよね～！',
-    'スキ率って...その記事がどれだけ心に届いたかってことだよね。',
-    'ふん、数字がすべてじゃないけど...スキ率は正直な指標よ。',
-    'スキ率ランキング～！どのカテゴリが強いかな？',
-    'のんびり分析するのも楽しいね～。',
-    'スキ率は読者の方の共感の深さ。大切にしたい数字ですね。',
-  ],
-  category: [
-    'どんなテーマで書いてきたか、データで可視化してみたよ。',
-    'カテゴリ分布！バランスどうかな？偏ってる？',
-    'こうやって見ると、書いてきたものの全体像が見えるね...。',
-    '...ちゃんとバランス考えて書いてるの？まあいいけど。',
-    'わー、こんなにいろんなジャンル書いてるんだ！すごい！',
-    'ジャンルの地図、面白いね～。どれが好き？',
-    '記事のカテゴリを俯瞰すると、あなたらしさが見えてきますね。',
-  ],
-  journey: [
-    'ここまでの軌跡、一つ一つが大切な記録だね。',
-    'うわー！こんなにたくさん書いてきたんだ！感動！',
-    'ゆっくり歩いてきた道のり...全部、大切な思い出だね。',
-    'べつに感慨深いとか...思ってないし。...すごいけど。',
-    'この道のり、振り返るとワクワクするね！',
-    'のんびり歩いてきたけど...ちゃんとここまで来たんだね。',
-    '一歩一歩、丁寧に積み重ねてきた道のり。素晴らしいですね。',
-  ],
-  action: [
-    'データを見た。次はどう動くか。ここからが設計だよ。',
-    'よーし！次のアクション、一緒に考えよ！',
-    '次にやること...焦らず、一つずつでいいからね。',
-    'データは揃ったでしょ。あとは動くだけよ。...頑張りなさいよ。',
-    '次のアクション！ワクワクするね！どれからやる？',
-    '次やること、のんびり選んでいいよ～。',
-    'データから見えた「次の一手」、一緒に考えましょうね。',
-  ],
-};
-
 function noteURL(key) { return 'https://note.com/hasyamo/n/' + key; }
 
 let _renderData = null;
 
 function getGirlLine(section) {
   const d = _renderData;
-  if (!d) return GIRL_LINES[section][TODAY_IDX];
   const i = TODAY_IDX;
+  const fallback = GIRL_LINES[section] ? GIRL_LINES[section][i] : '';
 
-  // データ連動セリフ
-  // 月子(i=0)だけが数値を語る。他のキャラは性格に沿った感情的反応。
-  // 順番: [月子, 陽, しずく, 凛華, るな, まひる, 日和]
-  const dynamic = {
-    growth: () => {
-      if (d.pvGrowth >= 200) return [`PV成長率${d.pvGrowth}%。設計が正しかった証拠だね。`,'なんかすっごい伸びてない！？嬉しい！','こんなに伸びてる...みんなに届いてるんだね。','...ちょっと、これ結構すごいんじゃないの。','やばーい！めっちゃ伸びてるじゃん！','ふわぁ...なんかすごいことになってるね～。','こんなに成長していたんですね。嬉しいですね。'][i];
-      if (d.pvGrowth >= 100) return [`PV成長率${d.pvGrowth}%。倍以上に成長してるね。`,'おー！けっこう伸びてるよ！いい感じ！','ゆっくりだけど、ちゃんと大きくなってるね。','ふーん...まあ悪くないんじゃない。','いい感じに伸びてるね～！','のんびりでも、ちゃんと育ってるね～。','着実に成長していますね。素敵です。'][i];
-      if (d.likeGrowth > d.pvGrowth) return [`スキの伸びがPVを上回ってる。η上昇は記事の質が上がった証拠だよ。`,'なんかスキがたくさん！みんな好きって言ってくれてるよ！','スキが増えてる...あったかい気持ちになるね。','...スキが多いわね。まあ、いい記事書いてたし。','スキいっぱい！愛されてるね～！','スキが増えてる...いいことだね～。','スキが増えていますね。読者の方の気持ちが伝わってきます。'][i];
-      return null;
-    },
-    hallOfFame: () => {
-      if (d.top5PV.length > 0 && parseInt(d.top5PV[0].pv) >= 1000) return [`1位が${d.top5PV[0].pv.toLocaleString()}PV。1000超えは一つの壁を越えた証だね。`,'わーい！めっちゃ読まれてるじゃん！すごい！','たくさんの人に届いてるんだね...嬉しいな。','...ふん、まあ当然の結果よ。いい記事だったし。','すごーい！大人気じゃん！','ほぇ～、よく読まれてるねぇ。','たくさんの方に読んでいただけて、ありがたいですね。'][i];
-      return null;
-    },
-    hallOfShame: () => {
-      if (d.worst3.length > 0 && d.worst3[0].pv <= 10) return [`最下位は${d.worst3[0].pv}PV。でも、リリースしなければ観測データはゼロだった。`,'まあこういうのもあるよ！次があるじゃん！','読まれなくても、書いたこと自体に意味はあるから...。','べつに気にすることないでしょ。...次、頑張りなさいよ。','ドンマイドンマイ！次いこ次！','まあまあ、そんな日もあるよ～。','大丈夫ですよ。すべてが大切な経験です。'][i];
-      return null;
-    },
-    fans: () => {
-      if (d.topFans.length > 0 && d.topFans[0].count >= 20) return [`${d.topFans[0].name}さんが${d.topFans[0].count}回。リピート率から見て、確実にコアファンだね。`,'こんなに何回も来てくれる人がいるの！？嬉しすぎ！','何度も読みに来てくれるって...あったかいね。','...そんなに読んでくれてるの。べつに感動してないけど。','常連さんだ！ありがとーって伝えたいね！','何度も来てくれるって、嬉しいねぇ。','何度も足を運んでくださる方がいるんですね。ありがたいです。'][i];
-      return null;
-    },
-    eta: () => {
-      if (d.top5Eta.length > 0 && parseFloat(d.top5Eta[0].eta) >= 15) return [`η${d.top5Eta[0].eta}%。読者の${Math.round(100/parseFloat(d.top5Eta[0].eta))}人に1人がスキしてる。高い共鳴率だね。`,'めっちゃ心に刺さってるってことだよね！すごーい！','読んでくれた人の心に、ちゃんと届いてるんだね...。','...まあ、いい記事だったってことでしょ。認めるわ。','刺さる記事だー！キラキラしてる！','いい記事書いてるんだねぇ、すごいなぁ。','読者の方の心に深く届いているんですね。素敵です。'][i];
-      return null;
-    },
-    action: () => {
-      if (d.rewriteCandidates.length >= 3) return ['リライト候補が3本。週末の「一つだけ壊す」対象を選ぼう。','やることいっぱいだね！どれからやる？','やれることがある...一つずつ、ゆっくりね。','候補が揃ってるでしょ。さっさと選びなさいよ。','いっぱいある！ワクワクするね！','いくつかあるねぇ...のんびり選ぼっか。','いくつか候補がありますね。一つずつ向き合いましょう。'][i];
-      if (d.rewriteCandidates.length === 0) return ['リライト候補がゼロ。今は新しい記事を書くフェーズだね。','新しいの書こ！まっさらなキャンバスだよ！','今は新しいものを生み出す時間だね...。','候補がないなら新しいの書きなさいよ。待ってないけど。','新しいの書けるチャンスだね！','なーんもないし、新しいの書く～？','新しい記事に集中できる時ですね。'][i];
-      return null;
-    },
-    journey: () => {
-      if (d.journeyCount >= 100) return [`${d.journeyCount}本。100本超えは統計的にも有意なデータ量だよ。`,'100本超え！？すごーい！お祝いだよ！','100本...ここまで歩いてきたんだね。感慨深い。','100本超え...やるじゃない。ちょっとだけ見直したわ。','100本おめでとー！！パーティーだね！','100本かぁ...のんびり続けてたら来ちゃったね～。','100本を超えましたね。一つ一つが大切な記録です。'][i];
-      if (d.daysSinceStart >= 90) return [`${d.daysSinceStart}日。3ヶ月超えの継続率は、設計が機能している証拠だね。`,'3ヶ月以上続いてる！すごい！えらい！','3ヶ月以上...ずっと続けてきたんだね。','3ヶ月？...ふん、まあ続いてるわね。','3ヶ月突破～！やったね！','3ヶ月かぁ...気づいたらここまで来てたね～。','3ヶ月を超えましたね。丁寧に歩んでこられた道のりです。'][i];
-      return null;
-    },
-  };
+  if (!d) return fallback;
 
-  const fn = dynamic[section];
-  return (fn && fn()) || GIRL_LINES[section][TODAY_IDX];
+  const rules = GIRL_DYNAMIC[section];
+  if (rules) {
+    for (const rule of rules) {
+      if (rule.cond(d)) {
+        const line = rule.lines[i];
+        return typeof line === 'function' ? line(d) : line;
+      }
+    }
+  }
+
+  return fallback;
 }
 
 // Navigator component HTML
@@ -687,7 +568,7 @@ function render(d) {
     <!-- FOLLOWER CHART -->
     <section class="sec" style="background:${CREAM};padding:48px 32px">
       <div style="max-width:900px;margin:0 auto">
-        <span class="badge" style="background:${PINK};color:#fff;margin-bottom:16px;display:inline-block">FOLLOWERS</span>
+        <span class="badge" style="background:${PINK};color:#fff;margin-bottom:16px;display:inline-block">仲間</span>
         <h2 class="dc" style="font-family:var(--font-display);font-size:clamp(28px,7vw,64px);line-height:1;margin-bottom:24px">
           フォロワーの軌跡
         </h2>
@@ -698,8 +579,8 @@ function render(d) {
     </section>
 
     <!-- CAST -->
-    <section class="sec" style="max-width:900px;margin:0 auto;text-align:center">
-      <span class="badge" style="background:${ACCENT};color:#fff;margin-bottom:16px">CAST</span>
+    <section class="sec" style="max-width:900px;margin:0 auto">
+      <span class="badge" style="background:${PINK};color:#fff;margin-bottom:16px">キャスト</span>
       <h2 class="dc" style="font-family:var(--font-display);font-size:clamp(38px,9vw,80px);line-height:.9;margin-top:12px">
         7つの朝、7人の彼女
       </h2>
@@ -715,7 +596,7 @@ function render(d) {
       ${navi('growth', false)}
       <div class="growth-grid">
         <div>
-          <span class="badge" style="background:${ACCENT};color:#fff;margin-bottom:16px">成長記録</span>
+          <span class="badge" style="background:${GREEN};color:#fff;margin-bottom:16px">成長記録</span>
           <h2 class="dc" style="font-family:var(--font-display);font-size:clamp(38px,9vw,80px);line-height:.9;margin-top:12px">
             はじまりから今日まで<br><span style="color:${ACCENT}">+${d.pvGrowth}%</span>
           </h2>
@@ -747,7 +628,7 @@ function render(d) {
         ${navi('category', false)}
         <span class="badge" style="background:${INK};color:${CREAM};margin-bottom:16px">カテゴリ</span>
         <h2 class="dc" style="font-family:var(--font-display);font-size:clamp(30px,8vw,64px);line-height:.9;margin-bottom:12px">
-          書いてきたものの<br>地図
+          書いてきたものの地図
         </h2>
         <p style="font-size:13px;color:#666;margin-bottom:24px">${d.totalArt}本の記事を A〜G に分類</p>
         <div class="cat-bar">${catBarHTML}</div>
@@ -762,8 +643,8 @@ function render(d) {
     <!-- ETA by CATEGORY -->
     <section class="sec" style="max-width:900px;margin:0 auto">
       ${navi('eta', false)}
-      <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:36px;flex-wrap:wrap">
-        <span class="badge" style="background:${ACCENT};color:#fff">ETA RANKING</span>
+      <div style="margin-bottom:36px">
+        <span class="badge" style="background:${CYAN};color:#fff;margin-bottom:16px;display:inline-block">分析</span>
         <h2 class="dc" style="font-family:var(--font-display);font-size:clamp(28px,7vw,64px);line-height:1">カテゴリ別 スキ率通信簿</h2>
       </div>
       <p style="font-size:13px;color:#666;margin-bottom:24px;line-height:1.7">
@@ -776,8 +657,8 @@ function render(d) {
     <section class="sec" style="background:${INK};color:${CREAM}">
       <div style="max-width:900px;margin:0 auto">
         ${navi('hallOfFame', true)}
-        <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:36px;flex-wrap:wrap">
-          <span class="badge" style="background:${ACCENT};color:#fff">HALL OF FAME</span>
+        <div style="margin-bottom:36px">
+          <span class="badge" style="background:${GOLD};color:${INK};margin-bottom:16px;display:inline-block">人気記事</span>
           <h2 class="dc-light" style="font-family:var(--font-display);font-size:clamp(28px,7vw,64px);line-height:1">読まれた記事たち</h2>
         </div>
         ${d.top5PV.map((a, i) => `
@@ -801,8 +682,8 @@ function render(d) {
     <section class="sec" style="background:#0e0a18;color:${CREAM};border-top:1px solid #ffffff0a">
       <div style="max-width:900px;margin:0 auto">
         ${navi('like', true)}
-        <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:36px;flex-wrap:wrap">
-          <span class="badge" style="background:${PINK}44;color:${PINK}">スキ</span>
+        <div style="margin-bottom:36px">
+          <span class="badge" style="background:${PINK}44;color:${PINK};margin-bottom:16px;display:inline-block">スキ</span>
           <h2 class="dc-light" style="font-family:var(--font-display);font-size:clamp(28px,7vw,64px);line-height:1">愛された記事たち</h2>
         </div>
         ${d.top5Like.map((a, i) => `
@@ -826,8 +707,8 @@ function render(d) {
     <section class="sec" style="background:#080e14;color:${CREAM};border-top:1px solid #ffffff0a">
       <div style="max-width:900px;margin:0 auto">
         ${navi('eta', true)}
-        <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:36px;flex-wrap:wrap">
-          <span class="badge" style="background:${CYAN}44;color:${CYAN}">QUALITY</span>
+        <div style="margin-bottom:36px">
+          <span class="badge" style="background:${CYAN}44;color:${CYAN};margin-bottom:16px;display:inline-block">共鳴</span>
           <h2 class="dc-light" style="font-family:var(--font-display);font-size:clamp(28px,7vw,64px);line-height:1">心に刺さった記事たち</h2>
         </div>
         <p style="font-size:12px;color:#ffffff55;margin-bottom:24px">η = スキ / PV。高いほど、読者の心に残った記事。</p>
@@ -852,8 +733,8 @@ function render(d) {
     <section class="sec" style="background:${CREAM}">
       <div style="max-width:900px;margin:0 auto">
         ${navi('fans', false)}
-        <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:12px;flex-wrap:wrap">
-          <span class="badge" style="background:${PINK};color:#fff">YOUR FANS</span>
+        <div style="margin-bottom:12px">
+          <span class="badge" style="background:${PINK};color:#fff;margin-bottom:16px;display:inline-block">応援者</span>
           <h2 class="dc" style="font-family:var(--font-display);font-size:clamp(28px,7vw,64px);line-height:1">いつもスキしてくれる人</h2>
         </div>
         <p style="font-size:13px;color:#666;margin-bottom:28px;line-height:1.7">
@@ -867,9 +748,9 @@ function render(d) {
     <section class="sec" style="background:${INK};color:${CREAM};border-top:1px solid #ffffff0a">
       <div style="max-width:900px;margin:0 auto">
         ${navi('hallOfShame', true)}
-        <span class="badge" style="background:#ffffff22;color:${CREAM};margin-bottom:12px;display:inline-block">HALL OF SHAME</span>
+        <span class="badge" style="background:#ffffff22;color:${CREAM};margin-bottom:12px;display:inline-block">観測記録</span>
         <h2 class="dc-light" style="font-family:var(--font-display);font-size:clamp(38px,10vw,80px);line-height:.88;margin-bottom:8px">
-          読まれなかった記事<br>
+          読まれなかった記事
           <span style="color:#ffffff44;font-size:70%">も、データ。</span>
         </h2>
         <div class="worst-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:32px">
@@ -891,9 +772,10 @@ function render(d) {
     <!-- TREND -->
     <section class="sec" style="background:#f5f0ff">
       <div style="max-width:900px;margin:0 auto">
-        <span class="badge" style="background:${INK};color:${CREAM};margin-bottom:16px;display:inline-block">STATUS</span>
+        ${navi('trend', false)}
+        <span class="badge" style="background:${INK};color:${CREAM};margin-bottom:16px;display:inline-block">観測</span>
         <h2 class="dc" style="font-family:var(--font-display);font-size:clamp(30px,8vw,64px);line-height:.9;margin-bottom:36px">
-          7日間の<br>いま
+          7日間のいま
         </h2>
         <div class="trend-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
           ${[
@@ -923,9 +805,9 @@ function render(d) {
     <section class="sec" style="background:${INK};color:${CREAM}">
       <div style="max-width:900px;margin:0 auto">
         ${navi('journey', true)}
-        <span class="badge" style="background:${ACCENT};color:#fff;margin-bottom:16px">JOURNEY</span>
+        <span class="badge" style="background:${PINK};color:#fff;margin-bottom:16px">歩み</span>
         <h2 class="dc-light" style="font-family:var(--font-display);font-size:clamp(44px,12vw,110px);line-height:.85;margin-bottom:24px">
-          彼女との<br><span style="color:${ACCENT}">軌跡</span>
+          彼女との<span style="color:${ACCENT}">軌跡</span>
         </h2>
         <p style="font-size:14px;color:#ffffff55;margin-bottom:32px;line-height:1.8">
           ${d.firstArticleDate} - ${d.lastArticleDate}
@@ -941,7 +823,7 @@ function render(d) {
     <section class="sec" style="background:${CREAM};overflow:hidden">
       <div style="max-width:900px;margin:0 auto">
         ${navi('action', false)}
-        <span class="badge" style="background:${ACCENT};color:#fff;margin-bottom:16px;display:inline-block">NEXT ACTION</span>
+        <span class="badge" style="background:${INK};color:${CREAM};margin-bottom:16px;display:inline-block">アクション</span>
         <h2 class="dc" style="font-family:var(--font-display);font-size:clamp(30px,8vw,64px);line-height:.9;margin-bottom:32px">
           次の一手
         </h2>
