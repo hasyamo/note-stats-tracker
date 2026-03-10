@@ -359,10 +359,11 @@ function compute(summary, articles, categories, likes) {
     .filter(c => c.article_number && !['pre','intro','special'].includes(c.article_number))
     .sort((a, b) => int(a.article_number) - int(b.article_number));
   const journeyCount = journeyArticles.length;
-  const firstArticleDate = journeyArticles.length > 0 ? journeyArticles[0].published_date : '';
+  const firstArticleDate = journeyArticles.length > 0
+    ? journeyArticles.reduce((a, b) => a.published_date < b.published_date ? a : b).published_date : '';
   const lastArticleDate = journeyArticles.length > 0 ? journeyArticles[journeyArticles.length - 1].published_date : '';
-  const daysSinceStart = firstArticleDate && lastArticleDate
-    ? Math.floor((new Date(lastArticleDate) - new Date(firstArticleDate)) / 86400000) : 0;
+  const daysSinceStart = firstArticleDate
+    ? Math.floor((new Date() - new Date(firstArticleDate)) / 86400000) : 0;
 
   // Build milestone events
   const milestones = [];
