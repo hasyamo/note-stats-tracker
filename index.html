@@ -488,6 +488,30 @@ canvas.trend-row-spark {
   background: var(--accent-cyan-dim);
 }
 
+.commentary-nav {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  color: var(--text-secondary);
+  background: none;
+  border: 1px solid var(--border);
+  padding: 4px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s;
+}
+
+.commentary-nav:hover:not(:disabled) {
+  color: var(--accent-cyan);
+  border-color: var(--accent-cyan-dim);
+  background: var(--accent-cyan-dim);
+}
+
+.commentary-nav:disabled {
+  opacity: 0.25;
+  cursor: default;
+}
+
 /* Trend panel */
 .trend-panel {
   min-height: auto;
@@ -711,8 +735,10 @@ canvas.trend-row-spark {
 
   <!-- 状態メモ（自動生成） -->
   <div class="commentary-strip" id="commentaryStrip" style="display:none;">
-    <div class="commentary-label">📝 今日の状態メモ（自動生成）</div>
+    <div class="commentary-label">📝 状態メモ（自動生成）</div>
+    <button class="commentary-nav" id="commentaryPrev" onclick="navigateDate(-1)" title="前日">&lt;</button>
     <div class="commentary-text" id="commentaryText"></div>
+    <button class="commentary-nav" id="commentaryNext" onclick="navigateDate(1)" title="翌日">&gt;</button>
     <button class="commentary-copy" id="commentaryCopy" onclick="copyCommentary()">Copy</button>
   </div>
 
@@ -845,6 +871,7 @@ let dailySummary = [];
 let latestSnapshot = [];
 let summaryData = []; // from daily_summary.csv
 let categoryMap = {}; // key → category
+let selectedDateIndex = -1; // -1 = uninitialized, set to last index after load
 
 // ===== Category Meta =====
 const CATEGORY_META = {
@@ -917,6 +944,8 @@ function processData(rows) {
     return { date: d, totalPV, totalLikes, totalComments, articleCount: dayArticles.length };
   });
 
+  const src = summaryData.length > 0 ? summaryData : dailySummary;
+  selectedDateIndex = src.length - 1;
   updateKPI();
   updateCommentary();
   renderRanking();
@@ -932,8 +961,9 @@ function processData(rows) {
 function updateKPI() {
   // Use summaryData if available, otherwise fall back to articles-derived summary
   const src = summaryData.length > 0 ? summaryData : dailySummary;
-  const latest = src[src.length - 1];
-  const prev = src.length > 1 ? src[src.length - 2] : null;
+  const idx = selectedDateIndex >= 0 ? selectedDateIndex : src.length - 1;
+  const latest = src[idx];
+  const prev = idx > 0 ? src[idx - 1] : null;
 
   if (!latest) return;
 
@@ -1006,8 +1036,13 @@ function updateCommentary() {
     return;
   }
 
-  const latest = src[src.length - 1];
-  const prev = src[src.length - 2];
+  const idx = selectedDateIndex >= 0 ? selectedDateIndex : src.length - 1;
+  const latest = src[idx];
+  const prev = idx > 0 ? src[idx - 1] : null;
+  if (!latest || !prev) {
+    document.getElementById('commentaryStrip').style.display = 'none';
+    return;
+  }
 
   const articleCount = latest.articleCount || latestSnapshot.length;
   const prevArticleCount = prev.articleCount || articleCount;
@@ -1065,6 +1100,20 @@ function updateCommentary() {
   document.getElementById('commentaryText').textContent = displayComment;
   document.getElementById('commentaryText').dataset.copyText = copyComment;
   document.getElementById('commentaryStrip').style.display = 'flex';
+
+  // Update nav button states
+  const src2 = summaryData.length > 0 ? summaryData : dailySummary;
+  document.getElementById('commentaryPrev').disabled = idx <= 0;
+  document.getElementById('commentaryNext').disabled = idx >= src2.length - 1;
+}
+
+function navigateDate(delta) {
+  const src = summaryData.length > 0 ? summaryData : dailySummary;
+  const next = selectedDateIndex + delta;
+  if (next < 0 || next >= src.length) return;
+  selectedDateIndex = next;
+  updateKPI();
+  updateCommentary();
 }
 
 function copyCommentary() {
