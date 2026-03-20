@@ -43,19 +43,6 @@ body {
   zoom: 1.1;
 }
 
-/* Subtle grid background */
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  background-image:
-    linear-gradient(var(--border-subtle) 1px, transparent 1px),
-    linear-gradient(90deg, var(--border-subtle) 1px, transparent 1px);
-  background-size: 60px 60px;
-  opacity: 0.3;
-  pointer-events: none;
-  z-index: 0;
-}
 
 .app { position: relative; z-index: 1; }
 
@@ -74,16 +61,20 @@ body::before {
 }
 
 .header h1 {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: 24px;
-  font-weight: 600;
-  color: var(--accent-cyan);
-  letter-spacing: -0.5px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: 1px;
 }
 
-.header h1 span {
-  color: var(--text-muted);
-  font-weight: 300;
+.header h1 .h1-lead {
+  font-size: 1.4em;
+  font-weight: 900;
+}
+
+.header h1 .accent {
+  color: var(--accent-cyan);
 }
 
 .header-meta {
@@ -422,8 +413,9 @@ canvas.trend-row-spark {
   padding: 16px 40px;
   text-align: center;
   font-family: var(--font-mono);
-  font-size: 10px;
-  color: var(--text-muted);
+  font-size: 11px;
+  color: var(--text-secondary);
+  letter-spacing: 1px;
 }
 
 /* Responsive */
@@ -667,6 +659,305 @@ canvas.trend-row-spark {
   font-family: var(--font-mono);
   font-size: 13px;
 }
+
+/* Tab Bar */
+.tab-bar {
+  display: flex;
+  gap: 0;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+  padding: 0 40px;
+}
+
+.tab-bar-btn {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 1px;
+  padding: 12px 24px;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+}
+
+.tab-bar-btn:hover { color: var(--text-secondary); }
+.tab-bar-btn.active {
+  color: var(--accent-cyan);
+  border-bottom-color: var(--accent-cyan);
+}
+
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+/* Daily Tab */
+#tabDaily {
+  background: #1a1a24;
+}
+
+.daily-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 32px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.daily-header-text {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-secondary);
+  letter-spacing: 1px;
+  margin-bottom: 4px;
+}
+
+/* Chat-style layout */
+.daily-chat {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.daily-chat-row {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.daily-chat-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid var(--accent-cyan);
+  flex-shrink: 0;
+  box-shadow: 0 0 4px rgba(108,92,231,0.2);
+}
+
+
+.daily-chat-bubble {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  background: #242433;
+  border-radius: 16px;
+  padding: 14px 18px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+.daily-chat-bubble::before {
+  content: '';
+  position: absolute;
+  left: -4px;
+  top: 16px;
+  width: 12px;
+  height: 12px;
+  background: #242433;
+  transform: rotate(45deg);
+}
+
+
+.daily-chat-name {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--accent-cyan);
+  font-weight: 700;
+  letter-spacing: 1px;
+  margin-bottom: 6px;
+}
+
+.daily-chat-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-muted);
+  letter-spacing: 1px;
+  margin-bottom: 4px;
+}
+
+.daily-chat-text {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+
+/* Embedded card inside bubble */
+.daily-chat-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px 16px;
+  margin-top: 10px;
+}
+
+.daily-memo-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.daily-memo-text {
+  flex: 1;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text-primary);
+  line-height: 1.5;
+}
+
+.daily-memo-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 10px;
+}
+
+/* Follower inline */
+.daily-follower-inline {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.daily-follower-value {
+  font-family: var(--font-mono);
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--accent-green);
+}
+
+.daily-follower-diff {
+  font-family: var(--font-mono);
+  font-size: 14px;
+}
+
+.daily-follower-diff.big-up { color: var(--accent-green); font-weight: 700; }
+.daily-follower-diff.big-down { color: var(--accent-pink); font-weight: 700; }
+.daily-follower-diff.normal { color: var(--text-muted); }
+
+/* Today's article inside bubble */
+.daily-article-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.daily-article-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.daily-article-cat {
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-weight: 600;
+  font-size: 11px;
+}
+
+/* Like ranking inside bubble */
+.daily-like-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.daily-like-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.daily-like-rank {
+  font-family: var(--font-mono);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--accent-pink);
+  min-width: 24px;
+  text-align: center;
+}
+
+.daily-like-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.daily-like-title {
+  font-size: 12px;
+  color: var(--text-primary);
+  line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.daily-like-diff {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--accent-pink);
+  white-space: nowrap;
+}
+
+/* Daily Closing */
+.daily-closing {
+  position: relative;
+  text-align: center;
+  padding: 40px 0 20px;
+  overflow: hidden;
+}
+
+.daily-closing-img {
+  width: 100%;
+  max-width: 400px;
+  display: block;
+  margin: 0 auto 24px;
+  object-fit: cover;
+  mask-image: linear-gradient(180deg, transparent 0%, black 20%, black 80%, transparent 100%);
+  -webkit-mask-image: linear-gradient(180deg, transparent 0%, black 20%, black 80%, transparent 100%);
+  opacity: 0.35;
+}
+
+.daily-closing-text {
+  font-family: var(--font-mono);
+  font-size: clamp(24px, 6vw, 40px);
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: var(--text-primary);
+  line-height: 1.2;
+  margin-bottom: 12px;
+}
+
+.daily-closing-text span {
+  color: var(--accent-cyan);
+}
+
+.daily-closing-sub {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.8;
+}
+
+@media (max-width: 900px) {
+  .header-meta { flex-wrap: wrap; }
+  .header-meta-sep { display: none; }
+  .header-meta-line { display: block; }
+  .tab-bar { padding: 0 16px; }
+  .tab-bar-btn { padding: 10px 14px; font-size: 12px; }
+  .daily-container { padding: 20px 16px; }
+  .daily-gems-grid { grid-template-columns: 1fr; }
+  .daily-navi { flex-direction: column; align-items: center; text-align: center; }
+}
 </style>
 </head>
 <body>
@@ -675,13 +966,12 @@ canvas.trend-row-spark {
   <!-- Header -->
   <header class="header">
     <div class="header-top">
-      <h1>note-stats <span>dashboard</span></h1>
-      <a href="wrapped.html" style="font-size:12px;color:#a29bfe;text-decoration:none;border:1px solid #a29bfe;padding:4px 12px;border-radius:16px;font-weight:700;letter-spacing:1px;transition:all .2s" onmouseover="this.style.background='#a29bfe';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='#a29bfe'">WRAPPED →</a>
+      <h1><span class="h1-lead">祈</span>るな、<span class="h1-lead accent">設</span><span class="accent">計しろ。</span></h1>
     </div>
     <div class="header-meta">
-      <span class="live">●</span> data updated: <span id="lastUpdate">--</span>
-      &nbsp;|&nbsp; articles: <span id="articleCount">--</span>
-      &nbsp;|&nbsp; tracking since: <span id="trackingSince">--</span>
+      <span class="header-meta-line"><span class="live">●</span> data updated: <span id="lastUpdate">--</span></span>
+      <span class="header-meta-sep">&nbsp;|&nbsp;</span>
+      <span class="header-meta-line"><span id="articleCount">--</span> articles / <span id="daysSinceStart">--</span> days / navi: <span id="navigatorName">--</span></span>
     </div>
   </header>
 
@@ -733,14 +1023,42 @@ canvas.trend-row-spark {
     </div>
   </div>
 
-  <!-- 状態メモ（自動生成） -->
-  <div class="commentary-strip" id="commentaryStrip" style="display:none;">
-    <div class="commentary-label">📝 状態メモ（自動生成）</div>
-    <button class="commentary-nav" id="commentaryPrev" onclick="navigateDate(-1)" title="前日">&lt;</button>
-    <div class="commentary-text" id="commentaryText"></div>
-    <button class="commentary-nav" id="commentaryNext" onclick="navigateDate(1)" title="翌日">&gt;</button>
-    <button class="commentary-copy" id="commentaryCopy" onclick="copyCommentary()">Copy</button>
+  <!-- Tab Bar -->
+  <div class="tab-bar" id="tabBar">
+    <button class="tab-bar-btn active" data-tab="daily">Daily</button>
+    <button class="tab-bar-btn" data-tab="weekly">Weekly</button>
+    <button class="tab-bar-btn" data-tab="monthly">Monthly</button>
+    <button class="tab-bar-btn" data-tab="deepdive">Deep Dive</button>
   </div>
+
+  <!-- Daily Tab -->
+  <div class="tab-content active" id="tabDaily">
+    <div class="daily-container">
+      <div class="daily-header-text">コピーして貼るだけ。深追いしない。</div>
+
+      <div class="daily-chat" id="dailyChat"></div>
+
+      <!-- Closing -->
+      <div class="daily-closing" id="dailyClosing"></div>
+    </div>
+  </div>
+
+  <!-- Weekly Tab (Phase 2) -->
+  <div class="tab-content" id="tabWeekly">
+    <div style="padding:60px 40px;text-align:center;">
+      <div class="no-data" style="height:auto;">記事を書く前に見る。書いた後では調整できない。<br><br>Weekly タブ — Phase 2 で実装</div>
+    </div>
+  </div>
+
+  <!-- Monthly Tab (Phase 3) -->
+  <div class="tab-content" id="tabMonthly">
+    <div style="padding:60px 40px;text-align:center;">
+      <div class="no-data" style="height:auto;">Monthly タブ — Phase 3 で実装</div>
+    </div>
+  </div>
+
+  <!-- Deep Dive Tab -->
+  <div class="tab-content" id="tabDeepdive">
 
   <!-- Charts Grid -->
   <div class="grid">
@@ -853,8 +1171,10 @@ canvas.trend-row-spark {
     </div>
   </div>
 
+  </div><!-- /tabDeepdive -->
+
   <footer class="footer">
-    note-stats-dashboard v0.1 — data stays in your browser
+    意志じゃなく、設計で。
   </footer>
 </div>
 
@@ -864,6 +1184,7 @@ canvas.trend-row-spark {
   <div class="tooltip-row" id="tooltipBody"></div>
 </div>
 
+<script src="girl-lines.js"></script>
 <script>
 // ===== State =====
 let articlesData = [];
@@ -871,7 +1192,79 @@ let dailySummary = [];
 let latestSnapshot = [];
 let summaryData = []; // from daily_summary.csv
 let categoryMap = {}; // key → category
+let categoryTitleMap = {}; // key → {category, title, published_date}
 let selectedDateIndex = -1; // -1 = uninitialized, set to last index after load
+
+// ===== Date Utilities =====
+// All date strings are YYYY-MM-DD. Avoid timezone issues by parsing as local date.
+
+function parseDate(dateStr) {
+  // Parse "YYYY-MM-DD" as local date (no timezone shift)
+  const p = dateStr.split('-').map(Number);
+  return new Date(p[0], p[1] - 1, p[2]);
+}
+
+function formatDate(d) {
+  // Date object → "YYYY-MM-DD"
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
+function getCharIdx(dateStr) {
+  // "YYYY-MM-DD" → character index (0=月, 1=火, ..., 6=日)
+  const dow = parseDate(dateStr).getDay(); // 0=Sun
+  return dow === 0 ? 6 : dow - 1;
+}
+
+function getDayLabel(dateStr) {
+  // "YYYY-MM-DD" → "YYYY-MM-DD（月）"
+  return dateStr + '（' + DAYS_JA[getCharIdx(dateStr)] + '）';
+}
+
+function getMondayOf(dateStr) {
+  // "YYYY-MM-DD" → Monday of that week as "YYYY-MM-DD"
+  const d = parseDate(dateStr);
+  const dow = d.getDay();
+  const offset = dow === 0 ? 6 : dow - 1;
+  d.setDate(d.getDate() - offset);
+  return formatDate(d);
+}
+
+function getTodayJST() {
+  const now = new Date();
+  const jst = new Date(now.getTime() + (9 * 60 - now.getTimezoneOffset()) * 60000);
+  return formatDate(jst);
+}
+
+// ===== Character Constants =====
+const DAYS_JA = ['月','火','水','木','金','土','日'];
+const CHIBI_FILES = ['mon','tue','wed','thu','fri','sat','sun'];
+const CHIBI_NAMES = ['月子','陽','しずく','凛華','るな','まひる','日和'];
+const TODAY_IDX = getCharIdx(getTodayJST());
+const TODAY_FILE = CHIBI_FILES[TODAY_IDX];
+const TODAY_NAME = CHIBI_NAMES[TODAY_IDX];
+
+function noteURL(key) { return 'https://note.com/hasyamo/n/' + key; }
+
+function getGirlLine(section) {
+  return getGirlLineForIdx(section, TODAY_IDX);
+}
+
+function getGirlLineForIdx(section, idx) {
+  if (typeof GIRL_DYNAMIC !== 'undefined' && GIRL_DYNAMIC[section] && typeof _dailyRenderData !== 'undefined') {
+    try {
+      for (const rule of GIRL_DYNAMIC[section]) {
+        if (rule.cond(_dailyRenderData)) {
+          const line = rule.lines[idx];
+          return typeof line === 'function' ? line(_dailyRenderData) : line;
+        }
+      }
+    } catch(e) { /* fallback to static lines */ }
+  }
+  const fallback = (typeof GIRL_LINES !== 'undefined' && GIRL_LINES[section]) ? GIRL_LINES[section][idx] : '';
+  return fallback || '';
+}
+
+let _dailyRenderData = {};
 
 // ===== Category Meta =====
 const CATEGORY_META = {
@@ -947,13 +1340,17 @@ function processData(rows) {
   const src = summaryData.length > 0 ? summaryData : dailySummary;
   selectedDateIndex = src.length - 1;
   updateKPI();
-  updateCommentary();
-  renderRanking();
-  renderScatter();
-  renderCategoryChart();
-  renderEtaTrend();
-  renderTrendCharts();
-  renderDecayChart();
+  renderDailyTab();
+  // Deep Dive charts: only render if tab is visible
+  const ddTab = document.getElementById('tabDeepdive');
+  if (ddTab && ddTab.classList.contains('active')) {
+    renderRanking();
+    renderScatter();
+    renderCategoryChart();
+    renderEtaTrend();
+    renderTrendCharts();
+    renderDecayChart();
+  }
   updateHeader(dates);
 }
 
@@ -1128,7 +1525,247 @@ function copyCommentary() {
 function updateHeader(dates) {
   document.getElementById('lastUpdate').textContent = dates[dates.length - 1];
   document.getElementById('articleCount').textContent = latestSnapshot.length;
-  document.getElementById('trackingSince').textContent = dates[0];
+  // Days since first article published
+  const firstPub = latestSnapshot
+    .map(a => a.published_at ? a.published_at.slice(0, 10) : '')
+    .filter(d => d)
+    .sort()[0];
+  if (firstPub) {
+    const days = Math.floor((parseDate(dates[dates.length - 1]) - parseDate(firstPub)) / 86400000);
+    document.getElementById('daysSinceStart').textContent = days;
+  }
+  // Navigator: character of latest data date
+  const charIdx = getCharIdx(dates[dates.length - 1]);
+  document.getElementById('navigatorName').textContent = CHIBI_NAMES[charIdx];
+}
+
+// ===== Tab Switching =====
+document.querySelectorAll('.tab-bar-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-bar-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+    const tabId = 'tab' + btn.dataset.tab.charAt(0).toUpperCase() + btn.dataset.tab.slice(1);
+    document.getElementById(tabId).classList.add('active');
+    // Re-render charts when Deep Dive becomes visible
+    if (btn.dataset.tab === 'deepdive' && latestSnapshot.length > 0) {
+      setTimeout(() => {
+        renderRanking();
+        renderScatter();
+        renderCategoryChart();
+        renderEtaTrend();
+        renderTrendCharts();
+        renderDecayChart();
+      }, 50);
+    }
+  });
+});
+
+// ===== Daily Tab Rendering (Chat Style) =====
+
+function renderDailyTab() {
+  const src = summaryData.length > 0 ? summaryData : dailySummary;
+  if (src.length < 2) return;
+
+  const idx = selectedDateIndex >= 0 ? selectedDateIndex : src.length - 1;
+  const latest = src[idx];
+  const prev = src[idx - 1];
+
+  // Build render data for girl-lines dynamic evaluation
+  const pvGrowth = prev.totalPV > 0 ? ((latest.totalPV - prev.totalPV) / prev.totalPV * 100) : 0;
+  const likeGrowth = prev.totalLikes > 0 ? ((latest.totalLikes - prev.totalLikes) / prev.totalLikes * 100) : 0;
+  // Follower
+  const followers = latest.followerCount || 0;
+  const prevFollowers = prev.followerCount || 0;
+  const fDiffVal = followers - prevFollowers;
+
+  // Like ranking top diff
+  const likeRankDiffs = getLikeDiffs(latest.date);
+  const topLikeDiff = likeRankDiffs.length > 0 ? likeRankDiffs[0].likeDiff : 0;
+
+  _dailyRenderData = {
+    pvGrowth: Math.round(pvGrowth), likeGrowth: Math.round(likeGrowth),
+    memoKey: '', // set below after memo calculation
+    followers, followerDiff: fDiffVal,
+    topLikeDiff,
+  };
+
+  // Character from data date
+  const charIdx = getCharIdx(latest.date);
+  const charFile = CHIBI_FILES[charIdx];
+  const charName = CHIBI_NAMES[charIdx];
+
+  // State memo
+  const articleCount = latest.articleCount || latestSnapshot.length;
+  const prevArticleCount = prev.articleCount || articleCount;
+  const reach = articleCount > 0 ? (latest.totalPV / articleCount) : 0;
+  const action_ = articleCount > 0 ? (latest.totalLikes / articleCount) : 0;
+  const eta = latest.totalPV > 0 ? (latest.totalLikes / latest.totalPV * 100) : 0;
+  const prevReach = prevArticleCount > 0 ? (prev.totalPV / prevArticleCount) : 0;
+  const prevAction = prevArticleCount > 0 ? (prev.totalLikes / prevArticleCount) : 0;
+  const prevEta = prev.totalPV > 0 ? (prev.totalLikes / prev.totalPV * 100) : 0;
+  const dir = (d) => d > 0.001 ? '↑' : (d < -0.001 ? '↓' : '→');
+  const rDir = dir(reach - prevReach), aDir = dir(action_ - prevAction), eDir = dir(eta - prevEta);
+  const memoKey = rDir + aDir + eDir;
+  const templates = {
+    '↑↑↑':'全指標上昇。好調日。','↑↑→':'リーチ・アクション共に上昇。スキ率は安定。',
+    '↑↑↓':'露出もアクションも増加。スキ率は低下、新規流入が多い可能性。',
+    '↑→↑':'リーチ拡大＋スキ率上昇。読者の質が良い流入。','↑→→':'リーチ微増。安定推移。',
+    '↑→↓':'リーチは伸びたがスキ率低下。タイトル勝ちの可能性。',
+    '↑↓↑':'露出増、アクション減。スキ率改善、固定層が反応か。',
+    '↑↓→':'露出増、アクション減。新規の反応が薄い可能性。',
+    '↑↓↓':'露出は増えたが刺さってない。タイトル勝ちの可能性。',
+    '→↑↑':'リーチ横ばいでアクション・スキ率上昇。内容の質が高い。',
+    '→↑→':'アクション微増。安定した運営日。',
+    '→↑↓':'アクション増だがスキ率低下。PV増がアクション増を上回っている。',
+    '→→↑':'スキ率だけ微増。読者の質がじわり向上。','→→→':'安定推移。現状維持。',
+    '→→↓':'スキ率だけ微減。大きな変化はなし。',
+    '→↓↑':'アクション減だがスキ率上昇。PV減で相対的に上昇か。',
+    '→↓→':'アクション微減。経過観察。',
+    '→↓↓':'アクション・スキ率共に低下。テーマか投稿タイミングを確認。',
+    '↓↑↑':'リーチ減でもアクション・スキ率上昇。固定読者の反応が濃い日。',
+    '↓↑→':'リーチ減だがアクション増。少数だが刺さっている。',
+    '↓↑↓':'リーチ減、アクション増、スキ率低下。変動大きめ、翌日も観察。',
+    '↓→↑':'閑散日だが質は高い。固定読者が反応。','↓→→':'リーチ微減。大きな変化なし。',
+    '↓→↓':'リーチ・スキ率共に微減。緩やかな下降傾向。',
+    '↓↓↑':'リーチ・アクション減だがスキ率上昇。PV減による相対効果の可能性。',
+    '↓↓→':'リーチ・アクション減。投稿のない日 or テーマが合わなかった可能性。',
+    '↓↓↓':'全指標下降。一時的な落ち込みか、テーマ・タイミングの見直しを。',
+  };
+  const memoComment = templates[memoKey] || '判定不能。';
+  const copyText = `リーチ${rDir} アクション${aDir} スキ率${eDir} | ${memoComment}`;
+
+  // Set memoKey for girl-lines dynamic evaluation
+  _dailyRenderData.memoKey = memoKey;
+
+  // Follower comment (using dailyFollower dynamic lines)
+  const followerComment = getGirlLineForIdx('dailyFollower', charIdx);
+
+  // Like ranking
+  const likeRankCards = buildLikeRankHTML(latest.date);
+  const likeIntro = getGirlLineForIdx('dailyLike', charIdx);
+
+  // Today's article
+  const todayArticleCards = buildTodayArticleHTML(latest.date);
+  const articleLines = [
+    '今日の記事、初動を確認しておこう。',
+    '今日の記事、出てるよ！どんな反応かな！',
+    '今日の記事...見てみようね。',
+    '今日の記事、出てたわよ。...一応。',
+    '今日の記事出てるよ！見て見て！',
+    '今日の記事～。どうかな～。',
+    '今日の記事が公開されていますね。',
+  ];
+  const articleIntro = todayArticleCards ? articleLines[charIdx] : '';
+
+  // Build chat
+  const avatar = `<img class="daily-chat-avatar" src="images/eyes-thumb/eyes-${charFile}.webp" alt="${charName}">`;
+  function chatRow(label, text, card) {
+    const labelHTML = label ? `<div class="daily-chat-label">${label}</div>` : '';
+    return `<div class="daily-chat-row">${avatar}<div class="daily-chat-bubble">${labelHTML}<div class="daily-chat-text">${text}</div>${card ? '<div class="daily-chat-card">'+card+'</div>' : ''}</div></div>`;
+  }
+
+  const memoCard = `
+    <div class="daily-memo-row">
+      <div class="daily-memo-text" id="dailyMemoText" data-copy-text="${copyText.replace(/"/g,'&quot;')}">${latest.date} | リーチ${rDir} アクション${aDir} スキ率${eDir} | ${memoComment}</div>
+      <button class="commentary-copy" onclick="copyDailyMemo()">Copy</button>
+    </div>
+    <div class="daily-memo-nav">
+      <button class="commentary-nav" onclick="navigateDailyDate(-1)" id="dailyPrev" title="前日">&lt;</button>
+      <button class="commentary-nav" onclick="navigateDailyDate(1)" id="dailyNext" title="翌日">&gt;</button>
+    </div>`;
+
+  let html = '';
+  html += chatRow('', getGirlLineForIdx('daily', charIdx), memoCard);
+  html += chatRow('', followerComment, '');
+  if (todayArticleCards) html += chatRow('', articleIntro, todayArticleCards);
+  html += chatRow('', likeIntro, likeRankCards || '');
+
+  document.getElementById('dailyChat').innerHTML = html;
+  document.getElementById('dailyPrev').disabled = (idx <= 1);
+  document.getElementById('dailyNext').disabled = (idx >= src.length - 1);
+
+  // Closing
+  document.getElementById('dailyClosing').innerHTML = `
+    <img class="daily-closing-img" src="images/eyes/eyes-${charFile}.webp" alt="">
+    <div class="daily-closing-text">観測は、<span>続く。</span></div>
+    <div class="daily-closing-sub">成果ではなく、判断を残す。<br>明日の朝も、彼女はおはようと言う。</div>`;
+}
+
+function copyDailyMemo() {
+  const text = document.getElementById('dailyMemoText').dataset.copyText;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.querySelector('#dailyChat .commentary-copy');
+    if (btn) { btn.textContent = 'Copied!'; setTimeout(() => { btn.textContent = 'Copy'; }, 1500); }
+  });
+}
+
+function navigateDailyDate(delta) {
+  const src = summaryData.length > 0 ? summaryData : dailySummary;
+  const next = selectedDateIndex + delta;
+  if (next < 1 || next >= src.length) return;
+  selectedDateIndex = next;
+  updateKPI();
+  renderDailyTab();
+}
+
+function buildTodayArticleHTML(dataDate) {
+  const todayArticles = latestSnapshot.filter(a => a.published_at && a.published_at.startsWith(dataDate));
+  if (todayArticles.length === 0) return '';
+  const mondayStr = getMondayOf(dataDate);
+  let abCount = 0;
+  latestSnapshot.forEach(a => {
+    if (a.published_at && a.published_at.slice(0,10) >= mondayStr && a.published_at.slice(0,10) <= dataDate) {
+      if (a.category === 'A' || a.category === 'B') abCount++;
+    }
+  });
+  // Average PV/Like across all articles
+  const allPVs = latestSnapshot.map(a => a.read_count).filter(v => v > 0);
+  const allLikes = latestSnapshot.map(a => a.like_count);
+  const avgPV = allPVs.length > 0 ? Math.round(allPVs.reduce((s,v) => s+v, 0) / allPVs.length) : 0;
+  const avgLike = allLikes.length > 0 ? Math.round(allLikes.reduce((s,v) => s+v, 0) / allLikes.length) : 0;
+
+  return todayArticles.map(a => {
+    const catColor = getCategoryColor(a.category);
+    const catName = getCategoryName(a.category);
+    const pvDiff = a.read_count - avgPV;
+    const likeDiff = a.like_count - avgLike;
+    const pvColor = pvDiff >= 0 ? 'var(--accent-green)' : 'var(--accent-pink)';
+    const likeColor = likeDiff >= 0 ? 'var(--accent-green)' : 'var(--accent-pink)';
+    return `<div class="daily-article-title">${a.title}</div>
+      <div class="daily-article-meta">
+        <span class="daily-article-cat" style="background:${catColor}22;color:${catColor}">${a.category} ${catName}</span>
+        <span>PV <span style="color:${pvColor};font-weight:600">${a.read_count}</span> <span style="font-size:10px">(平均${avgPV})</span></span>
+        <span>スキ <span style="color:${likeColor};font-weight:600">${a.like_count}</span> <span style="font-size:10px">(平均${avgLike})</span></span>
+        <span style="color:${abCount >= 2 ? 'var(--accent-green)' : 'var(--accent-amber)'}">今週 A+B: ${abCount}本</span>
+      </div>`;
+  }).join('');
+}
+
+function getLikeDiffs(dataDate) {
+  if (articlesData.length === 0) return [];
+  const dates = [...new Set(articlesData.map(a => a.date))].sort();
+  const dateIdx = dates.indexOf(dataDate);
+  if (dateIdx < 1) return [];
+  const prevDate = dates[dateIdx - 1];
+  const cur = articlesData.filter(a => a.date === dataDate);
+  const prv = articlesData.filter(a => a.date === prevDate);
+  const prevMap = {}; prv.forEach(a => { prevMap[a.key] = a.like_count; });
+  return cur
+    .map(a => ({ key:a.key, title:a.title, category:a.category, published_at:a.published_at||'', likeDiff:a.like_count-(prevMap[a.key]||0) }))
+    .filter(a => a.likeDiff > 0).sort((a,b) => b.likeDiff - a.likeDiff).slice(0, 3);
+}
+
+function buildLikeRankHTML(dataDate) {
+  const diffs = getLikeDiffs(dataDate);
+  if (diffs.length === 0) return '';
+  return `<div class="daily-like-list">${diffs.map((d,i) => {
+    const catColor = getCategoryColor(d.category);
+    const ps = d.published_at ? d.published_at.slice(0,10) : '';
+    let pub = ps;
+    if (ps) { pub = getDayLabel(ps); }
+    return `<div class="daily-like-item"><div class="daily-like-rank">${i+1}</div><div class="daily-like-info"><div class="daily-like-title"><span class="cat-badge" style="color:${catColor}">${d.category}</span> ${d.title}</div>${pub?`<div style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted);margin-top:3px">公開 ${pub}</div>`:''}</div><div class="daily-like-diff">+${d.likeDiff}</div></div>`;
+  }).join('')}</div>`;
 }
 
 // ===== 1. Ranking =====
@@ -2202,7 +2839,11 @@ async function loadFromRepo() {
             const catText = await catRes.text();
             const catRows = parseCSV(catText);
             categoryMap = {};
-            catRows.forEach(r => { categoryMap[r.key] = r.category; });
+            categoryTitleMap = {};
+            catRows.forEach(r => {
+              categoryMap[r.key] = r.category;
+              categoryTitleMap[r.key] = { category: r.category, title: r.title, published_date: r.published_date || '' };
+            });
           }
         } catch (e) {}
 
@@ -2234,11 +2875,14 @@ async function loadFromRepo() {
 // ===== Init =====
 window.addEventListener('resize', () => {
   if (latestSnapshot.length > 0) {
-    renderScatter();
-    renderCategoryChart();
-    renderEtaTrend();
-    renderTrendCharts();
-    renderDecayChart();
+    const ddTab = document.getElementById('tabDeepdive');
+    if (ddTab && ddTab.classList.contains('active')) {
+      renderScatter();
+      renderCategoryChart();
+      renderEtaTrend();
+      renderTrendCharts();
+      renderDecayChart();
+    }
   }
 });
 
