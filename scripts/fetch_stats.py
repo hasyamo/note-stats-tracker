@@ -63,7 +63,11 @@ JST = timezone(timedelta(hours=9))
 
 
 def get_today_jst():
-    return datetime.now(JST).strftime("%Y-%m-%d")
+    """JSTの「今日」を返す。0:00〜4:59に実行された場合は前日扱い"""
+    now = datetime.now(JST)
+    if now.hour < 5:
+        now = now - timedelta(days=1)
+    return now.strftime("%Y-%m-%d")
 
 
 def check_cookie_expiry():

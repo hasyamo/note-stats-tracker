@@ -1,9 +1,13 @@
-name: Daily Note Stats
+name: Note Stats Collection
 
 on:
   schedule:
-    # 毎日 14:00 UTC = 23:00 JST（実行は30分程度遅れる可能性あり）
-    - cron: '0 14 * * *'
+    # 朝 7:00 JST = 22:00 UTC前日（likes + my_likesのみ。スキ活の材料）
+    - cron: '0 22 * * *'
+    # 昼 16:30 JST = 7:30 UTC（note 16:00更新後。6h判定）
+    - cron: '30 7 * * *'
+    # 夜 22:30 JST = 13:30 UTC（メイン集計）
+    - cron: '30 13 * * *'
   workflow_dispatch: # 手動実行用
 
 permissions:
@@ -22,7 +26,9 @@ jobs:
         with:
           python-version: '3.12'
 
+      # 朝(22:00 UTC)はlikes系のみ、昼・夜はstatsも取得
       - name: Fetch note stats
+        if: github.event.schedule != '0 22 * * *'
         env:
           NOTE_COOKIE: ${{ secrets.NOTE_COOKIE }}
           NOTE_USERNAME: ${{ secrets.NOTE_USERNAME }}
@@ -32,6 +38,13 @@ jobs:
       - name: Fetch likes data
         continue-on-error: true
         run: python scripts/fetch_likes.py
+
+      - name: Fetch my likes data
+        continue-on-error: true
+        env:
+          NOTE_COOKIE: ${{ secrets.NOTE_COOKIE }}
+          NOTE_USERNAME: ${{ secrets.NOTE_USERNAME }}
+        run: python scripts/fetch_my_likes.py
 
       - name: Commit and push
         run: |
