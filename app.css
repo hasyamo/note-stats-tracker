@@ -981,6 +981,12 @@ canvas.trend-row-spark {
   display: none;
 }
 
+.weekly-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
 .weekly-header-text {
   font-family: var(--font-mono);
   font-size: 12px;

@@ -1306,6 +1306,75 @@ function buildWeeklyCatBalanceHTML(weekArticles, catCounts, abCount, monthArticl
     </div>`;
 }
 
+function copyWeeklyReport() {
+  const week = getWeekRange();
+  const weekArticles = latestSnapshot.filter(a => {
+    const pub = a.published_at ? a.published_at.slice(0, 10) : '';
+    return pub >= week.start && pub <= week.end;
+  }).sort((a, b) => (a.published_at || '').localeCompare(b.published_at || ''));
+
+  const catAvgs = getCategoryAvgs();
+  const catCounts = {};
+  weekArticles.forEach(a => { catCounts[a.category] = (catCounts[a.category] || 0) + 1; });
+
+  // Article list
+  const articleLines = weekArticles.map(a => {
+    const ca = catAvgs[a.category] || { avgPV: 0, avgLike: 0 };
+    const pub = a.published_at ? a.published_at.slice(0, 10) : '';
+    return `- ${a.category} #${a.title} PV${a.read_count}(${getCategoryName(a.category)}平均${ca.avgPV}) スキ${a.like_count}(${getCategoryName(a.category)}平均${ca.avgLike})`;
+  }).join('\n');
+
+  // Category balance
+  const CAT_ORDER = ['A','B','C','D','E','F','G'];
+  const weekCatLine = CAT_ORDER.filter(c => catCounts[c]).map(c => `${c}(${getCategoryName(c)})${catCounts[c]}本`).join(', ');
+
+  // Monthly
+  const monthAgo = formatDate(new Date(parseDate(week.dataDate).getTime() - 29 * 86400000));
+  const monthArticles = latestSnapshot.filter(a => {
+    const pub = a.published_at ? a.published_at.slice(0, 10) : '';
+    return pub >= monthAgo && pub <= week.dataDate;
+  });
+  const monthCats = {};
+  monthArticles.forEach(a => { monthCats[a.category] = (monthCats[a.category] || 0) + 1; });
+  const monthLine = Object.entries(MONTHLY_IDEAL).map(([c, [lo, hi]]) => {
+    const actual = monthCats[c] || 0;
+    let judge = 'OK';
+    if (actual < lo) judge = '不足';
+    else if (actual > hi) judge = '多め';
+    return `${c}(${getCategoryName(c)})${actual}本(理想${lo}〜${hi}) ${judge}`;
+  }).join(', ');
+
+  // Proposal (read from DOM)
+  const proposalEl = document.querySelector('#weeklyContent .weekly-action-list');
+  const proposalLines = proposalEl ? Array.from(proposalEl.querySelectorAll('.weekly-action-item')).map(el => '- ' + el.textContent).join('\n') : '';
+
+  const report = `## 今週の振り返り（${week.start}〜${week.end}）
+
+### 記事（${weekArticles.length}本）
+${articleLines || '- なし'}
+
+### カテゴリバランス
+- 今週: ${weekCatLine || 'なし'}
+- 月間（直近30日/${monthArticles.length}本）: ${monthLine}
+
+### 来週の提案
+${proposalLines || '- なし'}
+
+---
+
+### 相談
+上記の振り返りを踏まえて、以下を提案してください。
+1. 来週7本の記事テーマ（カテゴリ配分は提案を参考に）
+2. 今週「ひとつだけ壊す」施策（タイトル、タグ、投稿時間、構成など）
+3. 前回壊したことの評価（ミニログに記録があれば）
+`;
+
+  navigator.clipboard.writeText(report).then(() => {
+    const btn = document.querySelector('.weekly-toolbar .commentary-copy');
+    if (btn) { btn.textContent = 'Copied!'; setTimeout(() => { btn.textContent = 'レポートをコピー'; }, 2000); }
+  });
+}
+
 function buildWeeklyActionHTML(actions) {
   return `<div class="weekly-action-list">${actions.map(a => `<div class="weekly-action-item">${a}</div>`).join('')}</div>`;
 }
