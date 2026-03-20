@@ -65,6 +65,37 @@ document.getElementById('favicon').href = `images/favicon/eyes-${TODAY_FILE}.png
 
 function noteURL(key) { return 'https://note.com/hasyamo/n/' + key; }
 
+function getCategoryAvgs() {
+  const stats = {};
+  latestSnapshot.forEach(a => {
+    const c = a.category;
+    if (!c || c === '?') return;
+    if (!stats[c]) stats[c] = { totalPV: 0, totalLike: 0, count: 0 };
+    stats[c].totalPV += a.read_count;
+    stats[c].totalLike += a.like_count;
+    stats[c].count++;
+  });
+  const avgs = {};
+  Object.entries(stats).forEach(([c, s]) => {
+    avgs[c] = {
+      avgPV: s.count > 0 ? Math.round(s.totalPV / s.count) : 0,
+      avgLike: s.count > 0 ? Math.round(s.totalLike / s.count) : 0,
+    };
+  });
+  return avgs;
+}
+
+function getDataDateLabel(dataDate) {
+  const today = getTodayJST();
+  const todayD = parseDate(today);
+  const dataD = parseDate(dataDate);
+  const diffDays = Math.round((todayD - dataD) / 86400000);
+  if (diffDays === 0) return '今日';
+  if (diffDays === 1) return '前日';
+  if (diffDays === 2) return '前々日';
+  return `${diffDays}日前`;
+}
+
 function getGirlLine(section) {
   return getGirlLineForIdx(section, TODAY_IDX);
 }
@@ -96,6 +127,8 @@ const CATEGORY_META = {
   F: { name: '初期日記', color: '#555570', primary: false },
   G: { name: '特別枠',  color: '#888888', primary: false },
 };
+
+const MONTHLY_IDEAL = { A: [1,2], B: [5,7], C: [2,3], D: [5,6], E: [2,3], G: [0,1] };
 
 function getCategoryColor(cat) {
   return (CATEGORY_META[cat] || {}).color || '#555570';
@@ -415,11 +448,24 @@ function renderDailyTab() {
   const likeRankDiffs = getLikeDiffs(latest.date);
   const topLikeDiff = likeRankDiffs.length > 0 ? likeRankDiffs[0].likeDiff : 0;
 
+  // Today's article stats for girl-lines (category average comparison)
+  const todayArts = latestSnapshot.filter(a => a.published_at && a.published_at.startsWith(latest.date));
+  const dailyCatAvgs = getCategoryAvgs();
+  const hasTodayArticle = todayArts.length > 0;
+  const todayCat = hasTodayArticle ? todayArts[0].category : '';
+  const todayCatAvg = dailyCatAvgs[todayCat] || { avgPV: 0, avgLike: 0 };
+  const todayPVAboveAvg = hasTodayArticle && todayArts[0].read_count >= todayCatAvg.avgPV;
+  const todayLikeAboveAvg = hasTodayArticle && todayArts[0].like_count >= todayCatAvg.avgLike;
+  const todayPV = hasTodayArticle ? todayArts[0].read_count : 0;
+  const todayLike = hasTodayArticle ? todayArts[0].like_count : 0;
+
   _dailyRenderData = {
     pvGrowth: Math.round(pvGrowth), likeGrowth: Math.round(likeGrowth),
     memoKey: '', // set below after memo calculation
     followers, followerDiff: fDiffVal,
     topLikeDiff,
+    hasTodayArticle, todayPVAboveAvg, todayLikeAboveAvg,
+    todayPV, todayLike, dailyAvgPV: todayCatAvg.avgPV, dailyAvgLike: todayCatAvg.avgLike,
   };
 
   // Character from data date
@@ -492,24 +538,19 @@ function renderDailyTab() {
   html += dailyNavi('daily');
   html += `<div class="weekly-section">${memoCard}</div>`;
 
+  // Data date label
+  const dateLabel = getDataDateLabel(latest.date);
+  const articleSectionTitle = dateLabel === '今日' ? '今日の記事' : `${getDayLabel(latest.date)} の記事`;
+
   // 2. Follower
   html += dailyNavi('dailyFollower');
   html += `<div class="weekly-section"><div class="weekly-section-title">フォロワー前日比</div>
     <div style="font-family:var(--font-mono);font-size:20px;font-weight:700;color:var(--accent-green)">${followers.toLocaleString()} <span style="font-size:14px;color:${fDiffVal >= 5 ? 'var(--accent-green)' : fDiffVal <= -3 ? 'var(--accent-pink)' : 'var(--text-muted)'}">${fDiffVal >= 0 ? '+' : ''}${fDiffVal}</span></div></div>`;
 
   // 3. Today's article (if exists)
-  const articleLines = [
-    '今日の記事、初動を確認しておこう。',
-    '今日の記事、出てるよ！どんな反応かな！',
-    '今日の記事...見てみようね。',
-    '今日の記事、出てたわよ。...一応。',
-    '今日の記事出てるよ！見て見て！',
-    '今日の記事～。どうかな～。',
-    '今日の記事が公開されていますね。',
-  ];
   if (todayArticleCards) {
-    html += `<div class="weekly-navi"><img class="weekly-navi-img" src="images/eyes-thumb/eyes-${charFile}.webp" alt="${charName}"><div class="weekly-navi-body"><div class="weekly-navi-name">${charName}</div><div class="weekly-navi-line">${articleLines[charIdx]}</div></div></div>`;
-    html += `<div class="weekly-section"><div class="weekly-section-title">今日の記事</div>${todayArticleCards}</div>`;
+    html += dailyNavi('dailyArticle');
+    html += `<div class="weekly-section"><div class="weekly-section-title">${articleSectionTitle}</div>${todayArticleCards}</div>`;
   }
 
   // 4. Like ranking
@@ -555,25 +596,19 @@ function buildTodayArticleHTML(dataDate) {
       if (a.category === 'A' || a.category === 'B') abCount++;
     }
   });
-  // Average PV/Like across all articles
-  const allPVs = latestSnapshot.map(a => a.read_count).filter(v => v > 0);
-  const allLikes = latestSnapshot.map(a => a.like_count);
-  const avgPV = allPVs.length > 0 ? Math.round(allPVs.reduce((s,v) => s+v, 0) / allPVs.length) : 0;
-  const avgLike = allLikes.length > 0 ? Math.round(allLikes.reduce((s,v) => s+v, 0) / allLikes.length) : 0;
+  const catAvgs = getCategoryAvgs();
 
   return todayArticles.map(a => {
     const catColor = getCategoryColor(a.category);
     const catName = getCategoryName(a.category);
-    const pvDiff = a.read_count - avgPV;
-    const likeDiff = a.like_count - avgLike;
-    const pvColor = pvDiff >= 0 ? 'var(--accent-green)' : 'var(--accent-pink)';
-    const likeColor = likeDiff >= 0 ? 'var(--accent-green)' : 'var(--accent-pink)';
-    return `<div class="daily-article-title">${a.title}</div>
+    const ca = catAvgs[a.category] || { avgPV: 0, avgLike: 0 };
+    const pvColor = a.read_count >= ca.avgPV ? 'var(--accent-green)' : 'var(--accent-pink)';
+    const likeColor = a.like_count >= ca.avgLike ? 'var(--accent-green)' : 'var(--accent-pink)';
+    return `<div class="daily-article-title"><a href="${noteURL(a.key)}" target="_blank" rel="noopener" style="color:var(--text-primary);text-decoration:none">${a.title}</a></div>
       <div class="daily-article-meta">
         <span class="daily-article-cat" style="background:${catColor}22;color:${catColor}">${a.category} ${catName}</span>
-        <span>PV <span style="color:${pvColor};font-weight:600">${a.read_count}</span> <span style="font-size:10px">(平均${avgPV})</span></span>
-        <span>スキ <span style="color:${likeColor};font-weight:600">${a.like_count}</span> <span style="font-size:10px">(平均${avgLike})</span></span>
-        <span style="color:${abCount >= 2 ? 'var(--accent-green)' : 'var(--accent-amber)'}">今週 A+B: ${abCount}本</span>
+        <span>PV <span style="color:${pvColor};font-weight:600">${a.read_count}</span> <span style="font-size:10px">(${catName}平均${ca.avgPV})</span></span>
+        <span>スキ <span style="color:${likeColor};font-weight:600">${a.like_count}</span> <span style="font-size:10px">(${catName}平均${ca.avgLike})</span></span>
       </div>`;
   }).join('');
 }
@@ -600,7 +635,7 @@ function buildLikeRankHTML(dataDate) {
     const ps = d.published_at ? d.published_at.slice(0,10) : '';
     let pub = ps;
     if (ps) { pub = getDayLabel(ps); }
-    return `<div class="daily-like-item"><div class="daily-like-rank">${i+1}</div><div class="daily-like-info"><div class="daily-like-title"><span class="cat-badge" style="color:${catColor}">${d.category}</span> ${d.title}</div>${pub?`<div style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted);margin-top:3px">公開 ${pub}</div>`:''}</div><div style="text-align:right"><div class="daily-like-diff">+${d.likeDiff}</div><div style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted)">計${d.likeCount}</div></div></div>`;
+    return `<div class="daily-like-item"><div class="daily-like-rank">${i+1}</div><div class="daily-like-info"><div class="daily-like-title"><a href="${noteURL(d.key)}" target="_blank" rel="noopener" style="color:var(--text-primary);text-decoration:none"><span class="cat-badge" style="color:${catColor}">${d.category}</span> ${d.title}</a></div>${pub?`<div style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted);margin-top:3px">公開 ${pub}</div>`:''}</div><div style="text-align:right"><div class="daily-like-diff">+${d.likeDiff}</div><div style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted)">計${d.likeCount}</div></div></div>`;
   }).join('')}</div>`;
 }
 
@@ -760,15 +795,119 @@ function renderWeeklyTab() {
   });
   const monthCats = {};
   monthArticles.forEach(a => { monthCats[a.category] = (monthCats[a.category] || 0) + 1; });
-  const MONTHLY_IDEAL = { A: [2,3], B: [5,8], C: [3,4], D: [4,4], E: [1,2], G: [0,1] };
-  const hasCatWarning = Object.entries(MONTHLY_IDEAL).some(([c, [lo]]) => (monthCats[c] || 0) < lo);
+  // MONTHLY_IDEAL is defined as global constant
+  const hasCatShortage = Object.entries(MONTHLY_IDEAL).some(([c, [lo]]) => (monthCats[c] || 0) < lo);
+  const hasCatExcess = Object.entries(MONTHLY_IDEAL).some(([c, [, hi]]) => (monthCats[c] || 0) > hi);
+  const hasCatWarning = hasCatShortage || hasCatExcess;
+
+  // Build next week's category proposal (7 articles)
+  // Strategy: monthly ideal - (current month including this week) = remaining need
+  // Then distribute 7 articles to fill gaps, with η-priority (B>D>C>A>E)
+  const proposal = {};
+  let remaining = 7;
+
+  // Monthly counts already include this week. Simulate adding next week's 7 articles.
+  // Calculate how many more each category needs to reach ideal midpoint
+  const need = {};
+  Object.entries(MONTHLY_IDEAL).forEach(([c, [lo, hi]]) => {
+    const actual = monthCats[c] || 0;
+    const mid = Math.round((lo + hi) / 2);
+    need[c] = Math.max(0, mid - actual);
+  });
+
+  // 1. D minimum 1 (minilog fixed)
+  proposal['D'] = 1; remaining--;
+
+  // 2. Fill categories that need the most (η priority for ties)
+  const fillOrder = ['B', 'D', 'C', 'A', 'E'];
+  const WEEKLY_MAX = 3;
+
+  // First pass: fill needs
+  for (const c of fillOrder) {
+    if (remaining <= 0) break;
+    const n = need[c] - (proposal[c] || 0);
+    if (n > 0) {
+      const fill = Math.min(n, remaining, WEEKLY_MAX - (proposal[c] || 0));
+      if (fill > 0) {
+        proposal[c] = (proposal[c] || 0) + fill;
+        remaining -= fill;
+      }
+    }
+  }
+
+  // Second pass: fill remaining with η priority (avoid categories that were heavy this week)
+  while (remaining > 0) {
+    let filled = false;
+    for (const c of fillOrder) {
+      if (remaining <= 0) break;
+      if ((proposal[c] || 0) >= WEEKLY_MAX) continue;
+      // Skip if this category was heavy this week (3+ articles)
+      if ((catCounts[c] || 0) >= 3 && remaining > 1) continue;
+      proposal[c] = (proposal[c] || 0) + 1;
+      remaining--;
+      filled = true;
+    }
+    if (!filled) break;
+  }
+
+  const proposalText = ['A','B','C','D','E','G']
+    .filter(c => proposal[c])
+    .map(c => `${getCategoryName(c)} ${proposal[c]}本`)
+    .join('、');
 
   const actions = [];
-  if (abCount < 2) actions.push('来週7本の中にA or Bを2本以上入れる');
-  Object.entries(MONTHLY_IDEAL).forEach(([c, [lo]]) => {
-    if ((monthCats[c] || 0) < lo) actions.push(`${c}(${getCategoryName(c)})が月間で不足気味 → 意識的に配置`);
+  actions.push(`来週の提案: ${proposalText}`);
+
+  // Monthly shortage/excess notes
+  Object.entries(MONTHLY_IDEAL).forEach(([c, [lo, hi]]) => {
+    const actual = monthCats[c] || 0;
+    if (actual < lo) actions.push(`${c}(${getCategoryName(c)})が月間で不足 → 優先的に配置`);
   });
-  if (actions.length === 0) actions.push('現状の書き方を継続');
+
+  // Title advice
+  actions.push('タイトルに「結果示唆」を入れる → 「わかった」「変わった」「結果」でη +4pt');
+
+  // Compute weekly article analysis for girl-lines
+  const allPVs = latestSnapshot.map(a => a.read_count).filter(v => v > 0);
+  const allLikesArr = latestSnapshot.map(a => a.like_count);
+  const avgPV = allPVs.length > 0 ? Math.round(allPVs.reduce((s,v) => s+v, 0) / allPVs.length) : 0;
+  const avgLike = allLikesArr.length > 0 ? Math.round(allLikesArr.reduce((s,v) => s+v, 0) / allLikesArr.length) : 0;
+
+  const aboveAvgPV = weekArticles.filter(a => a.read_count >= avgPV).length;
+  const aboveAvgLike = weekArticles.filter(a => a.like_count >= avgLike).length;
+
+  // Category distribution
+  const uniqueCats = [...new Set(weekArticles.map(a => a.category))];
+  const isSingleCategory = uniqueCats.length === 1;
+  const singleCatName = isSingleCategory ? getCategoryName(uniqueCats[0]) : '';
+
+  // Weekly η by category (for sequence check)
+  const weekCatEta = {};
+  ['A','B','C','D','E'].forEach(c => {
+    const arts = weekArticles.filter(a => a.category === c);
+    if (arts.length === 0) return;
+    const pv = arts.reduce((s,a) => s + a.read_count, 0);
+    const lk = arts.reduce((s,a) => s + a.like_count, 0);
+    weekCatEta[c] = pv > 0 ? lk / pv * 100 : 0;
+  });
+  // Check if E > B (unusual)
+  const etaEoverB = (weekCatEta['E'] || 0) > (weekCatEta['B'] || 0) && weekCatEta['E'] && weekCatEta['B'];
+  // Check if A > B (unusual in data, but could happen)
+  const etaAoverB = (weekCatEta['A'] || 0) > (weekCatEta['B'] || 0) && weekCatEta['A'] && weekCatEta['B'];
+
+  // New vs regular ratio from likes
+  let totalNew = 0, totalReg = 0;
+  if (likesData.length > 0) {
+    const beforeWeek = new Set();
+    likesData.forEach(l => { const ld = (l.liked_at || '').slice(0, 10); if (ld < week.start) beforeWeek.add(l.like_user_id); });
+    likesData.forEach(l => {
+      const ld = (l.liked_at || '').slice(0, 10);
+      if (ld >= week.start && ld <= week.end) {
+        if (beforeWeek.has(l.like_user_id)) totalReg++; else totalNew++;
+      }
+    });
+  }
+  const isNewDominant = totalNew > totalReg;
 
   _weeklyRenderData = {
     followerGrowth4w,
@@ -778,22 +917,27 @@ function renderWeeklyTab() {
     atRiskCount: peopleStats.atRiskUsers.length,
     weekArticleCount: weekArticles.length,
     abCount, hasCatWarning,
+    bCount: catCounts['B'] || 0,
+    dCount: catCounts['D'] || 0,
+    eCount: catCounts['E'] || 0,
+    etaEoverB, etaAoverB,
     actionCount: actions.length,
+    aboveAvgPV, aboveAvgLike, avgPV, avgLike,
+    isSingleCategory, singleCatName,
+    isNewDominant, totalNew, totalReg,
   };
 
   const savedData = _dailyRenderData;
   _dailyRenderData = _weeklyRenderData;
 
-  // 5. Articles (月子=0)
-  document.getElementById('weeklyCategoryBalance').innerHTML = `
+  // 5. Articles (月子=0) + 6. Category balance (まひる=5) + 7. Action (凛華=3)
+  document.getElementById('weeklyContent').innerHTML = `
     ${weeklyNavi(0, 'weeklyArticles')}
     <div class="weekly-section">
       <div class="weekly-section-title">今週の記事（${weekArticles.length}本）</div>
       ${buildWeeklyArticlesHTML(weekArticles, week)}
-    </div>`;
+    </div>
 
-  // 6. Category balance (まひる=5) + 7. Action (凛華=3)
-  document.getElementById('weeklyAction').innerHTML = `
     ${weeklyNavi(5, 'weeklyCategoryBalance')}
     <div class="weekly-section">
       <div class="weekly-section-title">カテゴリバランス</div>
@@ -808,6 +952,54 @@ function renderWeeklyTab() {
 
   _dailyRenderData = savedData;
 
+  // Draw monthly pie chart
+  setTimeout(() => {
+    const canvas = document.getElementById('monthlyCatPie');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const W = 160, H = 160;
+    canvas.width = W * 2; canvas.height = H * 2;
+    canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
+    ctx.scale(2, 2);
+    const cx = W / 2, cy = H / 2, r = 60;
+    const PIE_ORDER = ['A','B','C','D','E','F','G'];
+    const pieTotal = monthArticles.length || 1;
+    let startAngle = -Math.PI / 2;
+    PIE_ORDER.forEach(c => {
+      const count = monthCats[c] || 0;
+      if (count === 0) return;
+      const sliceAngle = (count / pieTotal) * Math.PI * 2;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.arc(cx, cy, r, startAngle, startAngle + sliceAngle);
+      ctx.closePath();
+      ctx.fillStyle = getCategoryColor(c);
+      ctx.fill();
+      const midAngle = startAngle + sliceAngle / 2;
+      const lx = cx + Math.cos(midAngle) * (r * 0.65);
+      const ly = cy + Math.sin(midAngle) * (r * 0.65);
+      if (sliceAngle > 0.3) {
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 11px JetBrains Mono';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(c, lx, ly);
+      }
+      startAngle += sliceAngle;
+    });
+    ctx.beginPath();
+    ctx.arc(cx, cy, r * 0.4, 0, Math.PI * 2);
+    ctx.fillStyle = '#242433';
+    ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 14px JetBrains Mono';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(pieTotal, cx, cy - 6);
+    ctx.font = '9px JetBrains Mono';
+    ctx.fillStyle = '#888';
+    ctx.fillText('本', cx, cy + 8);
+  }, 100);
 }
 
 // --- Follower chart draw (called after DOM render) ---
@@ -1039,11 +1231,7 @@ function buildWeeklyArticlesHTML(weekArticles, week) {
       }
     });
   }
-  // Average PV/Like across all articles
-  const allPVs = latestSnapshot.map(a => a.read_count).filter(v => v > 0);
-  const allLikes = latestSnapshot.map(a => a.like_count);
-  const avgPV = allPVs.length > 0 ? Math.round(allPVs.reduce((s,v) => s+v, 0) / allPVs.length) : 0;
-  const avgLike = allLikes.length > 0 ? Math.round(allLikes.reduce((s,v) => s+v, 0) / allLikes.length) : 0;
+  const catAvgs = getCategoryAvgs();
 
   // My likes count per date
   const myLikesByDate = {};
@@ -1056,16 +1244,20 @@ function buildWeeklyArticlesHTML(weekArticles, week) {
     const catColor = getCategoryColor(a.category);
     const pub = a.published_at ? getDayLabel(a.published_at.slice(0, 10)) : '';
     const pc = articlePeopleCounts[a.key] || { newCount: 0, regCount: 0 };
-    const pvColor = a.read_count >= avgPV ? 'var(--accent-green)' : 'var(--accent-pink)';
-    const likeColor = a.like_count >= avgLike ? 'var(--accent-green)' : 'var(--accent-pink)';
+    const ca = catAvgs[a.category] || { avgPV: 0, avgLike: 0 };
+    const catName = getCategoryName(a.category);
+    const pvColor = a.read_count >= ca.avgPV ? 'var(--accent-green)' : 'var(--accent-pink)';
+    const likeColor = a.like_count >= ca.avgLike ? 'var(--accent-green)' : 'var(--accent-pink)';
     const pubDate = a.published_at ? a.published_at.slice(0, 10) : '';
     const myLikeCount = pubDate ? (myLikesByDate[pubDate] || 0) : 0;
     const myLikeHTML = myLikesData.length > 0 ? `<span style="font-size:10px;color:var(--text-muted);margin-left:6px">自分のスキ活: ${myLikeCount}件</span>` : '';
     return `<div class="weekly-article-row">
       <div class="weekly-article-title"><a href="${noteURL(a.key)}" target="_blank" rel="noopener" style="color:var(--text-primary);text-decoration:none"><span class="cat-badge" style="color:${catColor}">${a.category}</span> ${a.title}</a><div style="font-size:11px;color:var(--text-muted);margin-top:2px">${pub}${myLikeHTML}</div></div>
-      <div class="weekly-article-stat">PV <span style="color:${pvColor};font-weight:600">${a.read_count}</span> <span style="font-size:10px">(平均${avgPV})</span></div>
-      <div class="weekly-article-stat">スキ <span style="color:${likeColor};font-weight:600">${a.like_count}</span> <span style="font-size:10px">(平均${avgLike})</span></div>
-      <div class="weekly-article-people"><span style="color:var(--accent-green)">新${pc.newCount}</span> / <span style="color:var(--accent-cyan)">固${pc.regCount}</span></div>
+      <div class="weekly-article-stats-row">
+        <span class="weekly-article-stat">PV <span style="color:${pvColor};font-weight:600">${a.read_count}</span> <span class="weekly-article-avg">(${catName}平均${ca.avgPV})</span></span>
+        <span class="weekly-article-stat">スキ <span style="color:${likeColor};font-weight:600">${a.like_count}</span> <span class="weekly-article-avg">(${catName}平均${ca.avgLike})</span></span>
+        <span class="weekly-article-people"><span style="color:var(--accent-green)">新${pc.newCount}</span> / <span style="color:var(--accent-cyan)">固${pc.regCount}</span></span>
+      </div>
     </div>`;
   }).join('');
 }
@@ -1076,24 +1268,41 @@ function buildWeeklyCatBalanceHTML(weekArticles, catCounts, abCount, monthArticl
   const barHTML = CAT_ORDER.filter(c => catCounts[c]).map(c =>
     `<div class="weekly-cat-bar-seg" style="width:${(catCounts[c]/total*100).toFixed(1)}%;background:${getCategoryColor(c)}">${c}</div>`
   ).join('');
+
+  // Ideal bar (using midpoint of range)
+  const idealCounts = {};
+  let idealTotal = 0;
+  Object.entries(MONTHLY_IDEAL).forEach(([c, [lo, hi]]) => {
+    const mid = Math.round((lo + hi) / 2);
+    idealCounts[c] = mid;
+    idealTotal += mid;
+  });
+  const idealBarHTML = CAT_ORDER.filter(c => idealCounts[c]).map(c =>
+    `<div class="weekly-cat-bar-seg" style="width:${(idealCounts[c]/idealTotal*100).toFixed(1)}%;background:${getCategoryColor(c)};opacity:0.5">${c}</div>`
+  ).join('');
+
   const listHTML = CAT_ORDER.filter(c => catCounts[c]).map(c =>
     `<div class="weekly-cat-item"><div class="weekly-cat-dot" style="background:${getCategoryColor(c)}"></div>${c} ${getCategoryName(c)}: ${catCounts[c]}本</div>`
   ).join('');
-  const abCls = abCount >= 2 ? 'ok' : 'warn';
-  const abMsg = abCount >= 2 ? `✅ A+B = ${abCount}本（一次情報ゾーン維持）` : `⚠️ A+B = ${abCount}本（2本未満。来週はA or Bを増やす）`;
   const monthHTML = Object.entries(MONTHLY_IDEAL).map(([c, [lo, hi]]) => {
     const actual = monthCats[c] || 0;
-    let judge = '✅';
-    if (actual < lo) judge = '⚠️ 少ない'; else if (actual > hi) judge = '📝 多め';
+    let judge = '<span style="color:var(--accent-green)">OK</span>';
+    if (actual < lo) judge = '<span style="color:var(--accent-amber)">▼少ない</span>';
+    else if (actual > hi) judge = '<span style="color:var(--text-muted)">▲多め</span>';
     return `<div class="weekly-cat-item"><div class="weekly-cat-dot" style="background:${getCategoryColor(c)}"></div>${c} ${getCategoryName(c)}: ${actual}本 <span class="weekly-cat-ideal">(理想${lo}〜${hi}) ${judge}</span></div>`;
   }).join('');
   return `
+    <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">今週</div>
     <div class="weekly-cat-bar">${barHTML}</div>
-    <div class="weekly-cat-list">${listHTML}</div>
-    <div class="weekly-ab-status ${abCls}">${abMsg}</div>
+    <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;margin-top:8px">理想</div>
+    <div class="weekly-cat-bar" style="opacity:0.6">${idealBarHTML}</div>
+    <div class="weekly-cat-list" style="margin-top:12px">${listHTML}</div>
     <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
       <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px">月間カテゴリ比率（直近30日: ${monthArticles.length}本）</div>
-      <div class="weekly-cat-list">${monthHTML}</div>
+      <div class="weekly-cat-pie-layout">
+        <canvas id="monthlyCatPie" width="160" height="160" style="flex-shrink:0"></canvas>
+        <div class="weekly-cat-list" style="flex:1">${monthHTML}</div>
+      </div>
     </div>`;
 }
 
@@ -1545,28 +1754,88 @@ function renderWeeklyCategoryBalance() {
   const monthCats = {};
   monthArticles.forEach(a => { monthCats[a.category] = (monthCats[a.category] || 0) + 1; });
 
-  const MONTHLY_IDEAL = { A: [2,3], B: [5,8], C: [3,4], D: [4,4], E: [1,2], G: [0,1] };
+  // MONTHLY_IDEAL is defined as global constant
   const monthHTML = Object.entries(MONTHLY_IDEAL).map(([c, [lo, hi]]) => {
     const actual = monthCats[c] || 0;
-    let judge = '✅';
-    if (actual < lo) judge = '⚠️ 少ない';
-    else if (actual > hi) judge = '📝 多め';
+    let judge = '<span style="color:var(--accent-green)">OK</span>';
+    if (actual < lo) judge = '<span style="color:var(--accent-amber)">▼少ない</span>';
+    else if (actual > hi) judge = '<span style="color:var(--text-muted)">▲多め</span>';
     return `<div class="weekly-cat-item"><div class="weekly-cat-dot" style="background:${getCategoryColor(c)}"></div>${c} ${getCategoryName(c)}: ${actual}本 <span class="weekly-cat-ideal">(理想${lo}〜${hi}) ${judge}</span></div>`;
   }).join('');
 
   // A+B status
   const abCls = abCount >= 2 ? 'ok' : 'warn';
   const abMsg = abCount >= 2
-    ? `✅ A+B = ${abCount}本（一次情報ゾーン維持）`
-    : `⚠️ A+B = ${abCount}本（2本未満。来週はA or Bを増やす）`;
+    ? `A+B = ${abCount}本（一次情報ゾーン維持）`
+    : `A+B = ${abCount}本（2本未満。来週はA or Bを増やす）`;
 
   // Actions
-  const actions = [];
-  if (abCount < 2) actions.push('来週7本の中にA or Bを2本以上入れる');
-  Object.entries(MONTHLY_IDEAL).forEach(([c, [lo]]) => {
-    if ((monthCats[c] || 0) < lo) actions.push(`${c}(${getCategoryName(c)})が月間で不足気味 → 意識的に配置`);
+  // Build next week's category proposal (7 articles)
+  // Strategy: monthly ideal - (current month including this week) = remaining need
+  // Then distribute 7 articles to fill gaps, with η-priority (B>D>C>A>E)
+  const proposal = {};
+  let remaining = 7;
+
+  // Monthly counts already include this week. Simulate adding next week's 7 articles.
+  // Calculate how many more each category needs to reach ideal midpoint
+  const need = {};
+  Object.entries(MONTHLY_IDEAL).forEach(([c, [lo, hi]]) => {
+    const actual = monthCats[c] || 0;
+    const mid = Math.round((lo + hi) / 2);
+    need[c] = Math.max(0, mid - actual);
   });
-  if (actions.length === 0) actions.push('現状の書き方を継続');
+
+  // 1. D minimum 1 (minilog fixed)
+  proposal['D'] = 1; remaining--;
+
+  // 2. Fill categories that need the most (η priority for ties)
+  const fillOrder = ['B', 'D', 'C', 'A', 'E'];
+  const WEEKLY_MAX = 3;
+
+  // First pass: fill needs
+  for (const c of fillOrder) {
+    if (remaining <= 0) break;
+    const n = need[c] - (proposal[c] || 0);
+    if (n > 0) {
+      const fill = Math.min(n, remaining, WEEKLY_MAX - (proposal[c] || 0));
+      if (fill > 0) {
+        proposal[c] = (proposal[c] || 0) + fill;
+        remaining -= fill;
+      }
+    }
+  }
+
+  // Second pass: fill remaining with η priority (avoid categories that were heavy this week)
+  while (remaining > 0) {
+    let filled = false;
+    for (const c of fillOrder) {
+      if (remaining <= 0) break;
+      if ((proposal[c] || 0) >= WEEKLY_MAX) continue;
+      // Skip if this category was heavy this week (3+ articles)
+      if ((catCounts[c] || 0) >= 3 && remaining > 1) continue;
+      proposal[c] = (proposal[c] || 0) + 1;
+      remaining--;
+      filled = true;
+    }
+    if (!filled) break;
+  }
+
+  const proposalText = ['A','B','C','D','E','G']
+    .filter(c => proposal[c])
+    .map(c => `${getCategoryName(c)} ${proposal[c]}本`)
+    .join('、');
+
+  const actions = [];
+  actions.push(`来週の提案: ${proposalText}`);
+
+  // Monthly shortage/excess notes
+  Object.entries(MONTHLY_IDEAL).forEach(([c, [lo, hi]]) => {
+    const actual = monthCats[c] || 0;
+    if (actual < lo) actions.push(`${c}(${getCategoryName(c)})が月間で不足 → 優先的に配置`);
+  });
+
+  // Title advice
+  actions.push('タイトルに「結果示唆」を入れる → 「わかった」「変わった」「結果」でη +4pt');
 
   const actionsHTML = actions.map(a => `<div class="weekly-action-item">${a}</div>`).join('');
 

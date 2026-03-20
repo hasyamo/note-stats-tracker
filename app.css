@@ -22,6 +22,12 @@
   --glow-pink: 0 0 20px #ff3d8e22;
   --font-mono: 'JetBrains Mono', monospace;
   --font-sans: 'Noto Sans JP', sans-serif;
+  --spacing-navi-top: 32px;
+  --spacing-navi-bottom: 12px;
+  --spacing-section-bottom: 8px;
+  --section-bg: #242433;
+  --section-radius: 12px;
+  --section-padding: 24px;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -983,10 +989,11 @@ canvas.trend-row-spark {
 }
 
 .weekly-section {
-  background: #242433;
+  background: var(--section-bg);
   border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 24px;
+  border-radius: var(--section-radius);
+  padding: var(--section-padding);
+  margin-bottom: var(--spacing-section-bottom);
 }
 
 .weekly-section-title {
@@ -1003,13 +1010,8 @@ canvas.trend-row-spark {
   display: flex;
   gap: 14px;
   align-items: center;
-  margin-bottom: 12px;
-  margin-top: 24px;
-}
-
-.weekly-header-text + .weekly-navi,
-.weekly-navi:first-child {
-  margin-top: 8px;
+  margin-bottom: var(--spacing-navi-bottom);
+  margin-top: var(--spacing-navi-top);
 }
 
 .weekly-navi-img {
@@ -1186,12 +1188,22 @@ canvas.trend-row-spark {
   white-space: nowrap;
 }
 
+.weekly-article-stats-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
 .weekly-article-stat {
   font-family: var(--font-mono);
   font-size: 12px;
   color: var(--text-muted);
-  text-align: right;
   white-space: nowrap;
+}
+
+.weekly-article-avg {
+  font-size: 10px;
 }
 
 .weekly-article-people {
@@ -1201,6 +1213,12 @@ canvas.trend-row-spark {
 }
 
 /* Category balance */
+.weekly-cat-pie-layout {
+  display: flex;
+  gap: 24px;
+  align-items: center;
+}
+
 .weekly-cat-bar {
   display: flex;
   height: 32px;
@@ -1299,7 +1317,12 @@ canvas.trend-row-spark {
 @media (max-width: 900px) {
   .weekly-container { padding: 20px 16px; }
   .weekly-section { padding: 16px; }
-  .weekly-article-row { grid-template-columns: 1fr; gap: 4px; }
+  .weekly-cat-pie-layout { flex-direction: column; align-items: stretch; }
+  .weekly-cat-pie-layout canvas { align-self: center; }
+  .weekly-article-row { grid-template-columns: 1fr; }
+  .weekly-article-avg { display: none; }
+  .weekly-article-stats-row { gap: 8px; }
+  .weekly-article-stat { font-size: 11px; }
   .weekly-people-tabs { display: flex; flex-wrap: nowrap; }
   .weekly-people-tab { font-size: 10px; padding: 4px 6px; flex: 1; text-align: center; }
   .weekly-person { padding: 10px 12px; }
