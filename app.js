@@ -6,6 +6,7 @@ let summaryData = []; // from daily_summary.csv
 let categoryMap = {}; // key → category
 let categoryTitleMap = {}; // key → {category, title, published_date}
 let likesData = []; // from likes.csv
+let myLikesData = []; // from my_likes.csv
 let selectedDateIndex = -1; // -1 = uninitialized, set to last index after load
 
 // ===== Date Utilities =====
@@ -360,31 +361,36 @@ function updateHeader(dates) {
 }
 
 // ===== Tab Switching =====
-document.querySelectorAll('.tab-bar-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.tab-bar-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
-    const tabId = 'tab' + btn.dataset.tab.charAt(0).toUpperCase() + btn.dataset.tab.slice(1);
-    document.getElementById(tabId).classList.add('active');
-    // Re-render when tab becomes visible
-    if (btn.dataset.tab === 'activity' && latestSnapshot.length > 0) {
-      setTimeout(() => { renderActivityTab(); }, 50);
-    }
-    if (btn.dataset.tab === 'weekly' && latestSnapshot.length > 0) {
-      setTimeout(() => { renderWeeklyTab(); }, 50);
-    }
-    if (btn.dataset.tab === 'deepdive' && latestSnapshot.length > 0) {
-      setTimeout(() => {
-        renderRanking();
-        renderScatter();
-        renderCategoryChart();
-        renderEtaTrend();
-        renderTrendCharts();
-        renderDecayChart();
-      }, 50);
-    }
+function switchTab(tabName) {
+  document.querySelectorAll('.tab-bar-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.tab === tabName);
   });
+  document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
+  const tabId = 'tab' + tabName.charAt(0).toUpperCase() + tabName.slice(1);
+  const tabEl = document.getElementById(tabId);
+  if (tabEl) tabEl.classList.add('active');
+  history.replaceState(null, '', '#' + tabName);
+  // Re-render when tab becomes visible
+  if (tabName === 'activity' && latestSnapshot.length > 0) {
+    setTimeout(() => { renderActivityTab(); }, 50);
+  }
+  if (tabName === 'weekly' && latestSnapshot.length > 0) {
+    setTimeout(() => { renderWeeklyTab(); }, 50);
+  }
+  if (tabName === 'deepdive' && latestSnapshot.length > 0) {
+    setTimeout(() => {
+      renderRanking();
+      renderScatter();
+      renderCategoryChart();
+      renderEtaTrend();
+      renderTrendCharts();
+      renderDecayChart();
+    }, 50);
+  }
+}
+
+document.querySelectorAll('.tab-bar-btn').forEach(btn => {
+  btn.addEventListener('click', () => { switchTab(btn.dataset.tab); });
 });
 
 // ===== Daily Tab Rendering (Chat Style) =====
@@ -640,11 +646,9 @@ function renderActivityTab() {
   html += weeklyNavi(2, 'weeklyRegulars');
   html += `<div class="weekly-section">
     <div class="weekly-section-title">今週のスキしてくれた人 <span style="font-size:12px;color:var(--text-muted);font-weight:400">${week.start}〜${week.end}</span></div>
+    ${myLikesData.length > 0 ? '<div style="margin-bottom:8px"><label style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted);cursor:pointer;display:flex;align-items:center;gap:4px"><input type="checkbox" id="filterUnreturned" onchange="toggleUnreturnedFilter()" style="margin:0">未スキ返しのみ</label></div>' : ''}
     <div class="weekly-people-tabs">
-      <button class="weekly-people-tab active" onclick="switchWeeklyPeopleTab(this,'new')">新規（${peopleStats.newList.length}）</button>
-      <button class="weekly-people-tab" onclick="switchWeeklyPeopleTab(this,'return')">復帰（${peopleStats.returnList.length}）</button>
-      <button class="weekly-people-tab" onclick="switchWeeklyPeopleTab(this,'regular')">常連（${peopleStats.regList.length}）</button>
-      <button class="weekly-people-tab" onclick="switchWeeklyPeopleTab(this,'occasional')">たまに（${peopleStats.occasionalList.length}）</button>
+      ${buildPeopleTabButtons(peopleStats)}
     </div>
     <div class="weekly-people-content" data-tab="new">${buildWeeklyPeopleHTML(peopleStats, 'new', week)}</div>
     <div class="weekly-people-content" data-tab="return" style="display:none">${buildWeeklyPeopleHTML(peopleStats, 'return', week)}</div>
@@ -779,14 +783,6 @@ function renderWeeklyTab() {
 
   const savedData = _dailyRenderData;
   _dailyRenderData = _weeklyRenderData;
-
-  const latest = last28[last28.length - 1];
-  const first = last28[0];
-  const fDiff = (latest.followerCount || 0) - (first.followerCount || 0);
-  const fSign = fDiff >= 0 ? '+' : '';
-
-  document.getElementById('weeklyFollowerChart').innerHTML = '';
-  document.getElementById('weeklyHighlight').innerHTML = '';
 
   // 5. Articles (月子=0)
   document.getElementById('weeklyCategoryBalance').innerHTML = `
@@ -941,8 +937,22 @@ function computeWeeklyPeople(week) {
   };
 }
 
+// Build set of urlnames I've liked (for suki-return check)
+function getMyLikedUrlnames() {
+  const set = new Set();
+  myLikesData.forEach(l => {
+    if (l.author_urlname) set.add(l.author_urlname);
+  });
+  return set;
+}
+
 function personCardHTML(person) {
   const profileUrl = person.urlname ? `https://note.com/${person.urlname}` : '#';
+  const myLiked = getMyLikedUrlnames();
+  const returned = person.urlname && myLiked.has(person.urlname);
+  const statusHTML = myLikesData.length > 0
+    ? `<div style="font-size:11px;margin-top:2px">${returned ? '<span style="color:var(--accent-green)">✅ スキ返し済</span>' : '<span style="color:var(--accent-amber)">❌ 未スキ返し</span>'}</div>`
+    : '';
   return `
     <div class="weekly-person">
       <img class="weekly-person-avatar" data-urlname="${person.urlname}" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='36' height='36'%3E%3Crect fill='%23333' width='36' height='36' rx='18'/%3E%3C/svg%3E" alt="">
@@ -953,8 +963,42 @@ function personCardHTML(person) {
       <div class="weekly-person-stats">
         <div>${person.articles.length}記事</div>
         <div>${person.followerCount.toLocaleString()} followers</div>
+        ${statusHTML}
       </div>
     </div>`;
+}
+
+function toggleUnreturnedFilter() {
+  const checked = document.getElementById('filterUnreturned').checked;
+  const myLiked = getMyLikedUrlnames();
+  document.querySelectorAll('.weekly-person').forEach(el => {
+    if (!checked) {
+      el.style.display = '';
+      return;
+    }
+    const urlname = el.querySelector('.weekly-person-avatar')?.dataset?.urlname || '';
+    el.style.display = (urlname && myLiked.has(urlname)) ? 'none' : '';
+  });
+}
+
+function buildPeopleTabButtons(stats) {
+  const myLiked = myLikesData.length > 0 ? getMyLikedUrlnames() : null;
+  const tabs = [
+    { id: 'new', label: '新規', list: stats.newList, active: true },
+    { id: 'return', label: '復帰', list: stats.returnList, active: false },
+    { id: 'regular', label: '常連', list: stats.regList, active: false },
+    { id: 'occasional', label: 'たまに', list: stats.occasionalList, active: false },
+  ];
+  return tabs.map(t => {
+    let count;
+    if (myLiked) {
+      const returned = t.list.filter(p => p.urlname && myLiked.has(p.urlname)).length;
+      count = `${returned}/${t.list.length}`;
+    } else {
+      count = `${t.list.length}`;
+    }
+    return `<button class="weekly-people-tab${t.active ? ' active' : ''}" onclick="switchWeeklyPeopleTab(this,'${t.id}')">${t.label}<br><span class="weekly-people-tab-count">（${count}）</span></button>`;
+  }).join('');
 }
 
 function buildWeeklyPeopleHTML(stats, mode, week) {
@@ -995,14 +1039,32 @@ function buildWeeklyArticlesHTML(weekArticles, week) {
       }
     });
   }
+  // Average PV/Like across all articles
+  const allPVs = latestSnapshot.map(a => a.read_count).filter(v => v > 0);
+  const allLikes = latestSnapshot.map(a => a.like_count);
+  const avgPV = allPVs.length > 0 ? Math.round(allPVs.reduce((s,v) => s+v, 0) / allPVs.length) : 0;
+  const avgLike = allLikes.length > 0 ? Math.round(allLikes.reduce((s,v) => s+v, 0) / allLikes.length) : 0;
+
+  // My likes count per date
+  const myLikesByDate = {};
+  myLikesData.forEach(l => {
+    const d = (l.liked_at || '').slice(0, 10);
+    if (d) myLikesByDate[d] = (myLikesByDate[d] || 0) + 1;
+  });
+
   return weekArticles.sort((a, b) => (a.published_at || '').localeCompare(b.published_at || '')).map(a => {
     const catColor = getCategoryColor(a.category);
     const pub = a.published_at ? getDayLabel(a.published_at.slice(0, 10)) : '';
     const pc = articlePeopleCounts[a.key] || { newCount: 0, regCount: 0 };
+    const pvColor = a.read_count >= avgPV ? 'var(--accent-green)' : 'var(--accent-pink)';
+    const likeColor = a.like_count >= avgLike ? 'var(--accent-green)' : 'var(--accent-pink)';
+    const pubDate = a.published_at ? a.published_at.slice(0, 10) : '';
+    const myLikeCount = pubDate ? (myLikesByDate[pubDate] || 0) : 0;
+    const myLikeHTML = myLikesData.length > 0 ? `<span style="font-size:10px;color:var(--text-muted);margin-left:6px">自分のスキ活: ${myLikeCount}件</span>` : '';
     return `<div class="weekly-article-row">
-      <div class="weekly-article-title"><span class="cat-badge" style="color:${catColor}">${a.category}</span> ${a.title}<div style="font-size:11px;color:var(--text-muted);margin-top:2px">${pub}</div></div>
-      <div class="weekly-article-stat">PV ${a.read_count}</div>
-      <div class="weekly-article-stat">スキ ${a.like_count}</div>
+      <div class="weekly-article-title"><a href="${noteURL(a.key)}" target="_blank" rel="noopener" style="color:var(--text-primary);text-decoration:none"><span class="cat-badge" style="color:${catColor}">${a.category}</span> ${a.title}</a><div style="font-size:11px;color:var(--text-muted);margin-top:2px">${pub}${myLikeHTML}</div></div>
+      <div class="weekly-article-stat">PV <span style="color:${pvColor};font-weight:600">${a.read_count}</span> <span style="font-size:10px">(平均${avgPV})</span></div>
+      <div class="weekly-article-stat">スキ <span style="color:${likeColor};font-weight:600">${a.like_count}</span> <span style="font-size:10px">(平均${avgLike})</span></div>
       <div class="weekly-article-people"><span style="color:var(--accent-green)">新${pc.newCount}</span> / <span style="color:var(--accent-cyan)">固${pc.regCount}</span></div>
     </div>`;
   }).join('');
@@ -2635,6 +2697,15 @@ async function loadFromRepo() {
           }
         } catch (e) {}
 
+        // Load my_likes.csv
+        try {
+          const mlRes = await fetch('./data/my_likes.csv');
+          if (mlRes.ok) {
+            const mlText = await mlRes.text();
+            myLikesData = parseCSV(mlText);
+          }
+        } catch (e) {}
+
         processData(rows);
         return true;
       }
@@ -2658,4 +2729,10 @@ window.addEventListener('resize', () => {
 });
 
 // Try to load from repo on init
-loadFromRepo();
+loadFromRepo().then(() => {
+  // Restore tab from URL hash
+  const hash = location.hash.replace('#', '');
+  if (hash && document.querySelector(`.tab-bar-btn[data-tab="${hash}"]`)) {
+    switchTab(hash);
+  }
+});

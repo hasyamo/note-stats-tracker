@@ -968,7 +968,11 @@ canvas.trend-row-spark {
   padding: 32px 40px;
   display: flex;
   flex-direction: column;
-  gap: 32px;
+  gap: 0;
+}
+
+.weekly-container > div:empty {
+  display: none;
 }
 
 .weekly-header-text {
@@ -1003,8 +1007,9 @@ canvas.trend-row-spark {
   margin-top: 24px;
 }
 
+.weekly-header-text + .weekly-navi,
 .weekly-navi:first-child {
-  margin-top: 0;
+  margin-top: 8px;
 }
 
 .weekly-navi-img {
@@ -1060,6 +1065,10 @@ canvas.trend-row-spark {
   border-radius: 4px 4px 0 0;
   cursor: pointer;
   transition: all 0.15s;
+}
+
+.weekly-people-tab-count {
+  font-size: 12px;
 }
 
 .weekly-people-tab.active {
@@ -1261,8 +1270,8 @@ canvas.trend-row-spark {
 .weekly-action-label {
   font-family: var(--font-mono);
   font-size: 14px;
-  font-weight: 700;
-  color: var(--accent-cyan);
+  font-weight: 600;
+  color: var(--text-primary);
   letter-spacing: 1px;
   margin-bottom: 12px;
 }
@@ -1291,8 +1300,8 @@ canvas.trend-row-spark {
   .weekly-container { padding: 20px 16px; }
   .weekly-section { padding: 16px; }
   .weekly-article-row { grid-template-columns: 1fr; gap: 4px; }
-  .weekly-people-tabs { flex-wrap: wrap; }
-  .weekly-people-tab { font-size: 11px; padding: 5px 10px; }
+  .weekly-people-tabs { display: flex; flex-wrap: nowrap; }
+  .weekly-people-tab { font-size: 10px; padding: 4px 6px; flex: 1; text-align: center; }
   .weekly-person { padding: 10px 12px; }
   .weekly-person-name a { font-size: 12px; }
   .weekly-person-stats { font-size: 10px; }
