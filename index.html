@@ -3,8 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>note stats dashboard</title>
+<title>祈るな、設計しろ。</title>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
+<link rel="icon" id="favicon" type="image/png" href="images/favicon/eyes-mon.png">
 <link rel="stylesheet" href="app.css?v=1.0.0">
 </head>
 <body>
@@ -73,38 +74,44 @@
   <!-- Tab Bar -->
   <div class="tab-bar" id="tabBar">
     <button class="tab-bar-btn active" data-tab="daily">Daily</button>
+    <button class="tab-bar-btn" data-tab="activity">Activity</button>
     <button class="tab-bar-btn" data-tab="weekly">Weekly</button>
-    <button class="tab-bar-btn" data-tab="monthly">Monthly</button>
     <button class="tab-bar-btn" data-tab="deepdive">Deep Dive</button>
   </div>
 
   <!-- Daily Tab -->
   <div class="tab-content active" id="tabDaily">
-    <div class="daily-container">
-      <div class="daily-header-text">コピーして貼るだけ。深追いしない。</div>
-
-      <div class="daily-chat" id="dailyChat"></div>
-
-      <!-- Closing -->
+    <div class="weekly-container">
+      <div class="daily-toolbar">
+        <div class="daily-toolbar-nav">
+          <button class="commentary-nav" onclick="navigateDailyDate(-1)" id="dailyPrev" title="前日">&lt;</button>
+          <span class="daily-toolbar-date" id="dailyDate">--</span>
+          <button class="commentary-nav" onclick="navigateDailyDate(1)" id="dailyNext" title="翌日">&gt;</button>
+        </div>
+        <button class="commentary-copy" onclick="copyDailyMemo()">Copy</button>
+      </div>
+      <div class="weekly-header-text">コピーして貼るだけ。深追いしない。</div>
+      <div id="dailyContent"></div>
       <div class="daily-closing" id="dailyClosing"></div>
+    </div>
+  </div>
+
+  <!-- Activity Tab -->
+  <div class="tab-content" id="tabActivity">
+    <div class="weekly-container">
+      <div class="weekly-header-text">つながりを確認して、スキ活に行く。</div>
+      <div id="activityContent"></div>
     </div>
   </div>
 
   <!-- Weekly Tab -->
   <div class="tab-content" id="tabWeekly">
     <div class="weekly-container">
-      <div class="weekly-header-text">記事を書く前に見る。書いた後では調整できない。</div>
+      <div class="weekly-header-text">振り返って、来週を設計する。</div>
       <div id="weeklyFollowerChart"></div>
       <div id="weeklyHighlight"></div>
       <div id="weeklyCategoryBalance"></div>
       <div id="weeklyAction"></div>
-    </div>
-  </div>
-
-  <!-- Monthly Tab (Phase 3) -->
-  <div class="tab-content" id="tabMonthly">
-    <div style="padding:60px 40px;text-align:center;">
-      <div class="no-data" style="height:auto;">Monthly タブ — Phase 3 で実装</div>
     </div>
   </div>
 

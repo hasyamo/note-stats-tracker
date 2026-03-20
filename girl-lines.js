@@ -778,4 +778,110 @@ const GIRL_DYNAMIC = {
       'スキの変動はありませんでした。こういう日もありますよ。',
     ]},
   ],
+
+  // ===== Weekly Tab: フォロワー推移 (陽=index 1) =====
+  weeklyFollower: [
+    { cond: d => d.followerGrowth4w >= 20, lines: [
+      null, d => `4週間で+${d.followerGrowth4w}！すごい伸びだよ！この調子！`, null, null, null, null, null,
+    ]},
+    { cond: d => d.followerGrowth4w >= 10, lines: [
+      null, d => `4週間で+${d.followerGrowth4w}！いい感じに増えてるよ！`, null, null, null, null, null,
+    ]},
+    { cond: d => d.followerGrowth4w >= 1, lines: [
+      null, d => `4週間で+${d.followerGrowth4w}。着実に増えてるね！`, null, null, null, null, null,
+    ]},
+    { cond: d => true, lines: [
+      null, '伸びてないけど...波はあるもんだよ！ここからだよ！', null, null, null, null, null,
+    ]},
+  ],
+
+  // ===== Weekly Tab: 新規スキの人 (るな=index 4) =====
+  weeklyNewLikers: [
+    { cond: d => d.newLikerCount >= 10, lines: [
+      null, null, null, null, d => `新規${d.newLikerCount}人！めっちゃ来てる！スキ返しに行こう！`, null, null,
+    ]},
+    { cond: d => d.newLikerCount >= 5, lines: [
+      null, null, null, null, d => `新規${d.newLikerCount}人！新しい人いるよ！チェックしに行こう！`, null, null,
+    ]},
+    { cond: d => d.newLikerCount >= 1, lines: [
+      null, null, null, null, d => `新規${d.newLikerCount}人！スキ返しに行ってみよ！`, null, null,
+    ]},
+    { cond: d => true, lines: [
+      null, null, null, null, '今週は新しい人いなかったね。でも来週はきっと！', null, null,
+    ]},
+  ],
+
+  // ===== Weekly Tab: 復帰・常連・たまに (しずく=index 2) =====
+  weeklyRegulars: [
+    { cond: d => d.returnCount > 0 && d.regularCount > 0, lines: [
+      null, null, d => `復帰してくれた人が${d.returnCount}人...それに常連さんも${d.regularCount}人。嬉しいね。`, null, null, null, null,
+    ]},
+    { cond: d => d.returnCount > 0, lines: [
+      null, null, d => `また来てくれた人が${d.returnCount}人いるよ...嬉しいね。`, null, null, null, null,
+    ]},
+    { cond: d => d.regularCount > 0, lines: [
+      null, null, d => `いつもの人たちが${d.regularCount}人。ありがたいね...。`, null, null, null, null,
+    ]},
+    { cond: d => true, lines: [
+      null, null, '今週は静かだったね...でも、きっと読んでくれてる人はいるから。', null, null, null, null,
+    ]},
+  ],
+
+  // ===== Weekly Tab: 離脱危機 (日和=index 6) =====
+  weeklyAtRisk: [
+    { cond: d => d.atRiskCount >= 5, lines: [
+      null, null, null, null, null, null, d => `${d.atRiskCount}人の方が最近来ていないみたい...。よかったら、記事を読みに行ってあげませんか？`,
+    ]},
+    { cond: d => d.atRiskCount >= 1, lines: [
+      null, null, null, null, null, null, d => `${d.atRiskCount}人の方が少し離れているかも。気にかけてあげてくださいね。`,
+    ]},
+    { cond: d => true, lines: [
+      null, null, null, null, null, null, '大丈夫、みんないてくれてますよ。安心してくださいね。',
+    ]},
+  ],
+
+  // ===== Weekly Tab: 今週の記事 (月子=index 0) =====
+  weeklyArticles: [
+    { cond: d => d.weekArticleCount >= 7, lines: [
+      d => `今週は${d.weekArticleCount}本。毎日投稿を維持できてるね。内容を確認しよう。`, null, null, null, null, null, null,
+    ]},
+    { cond: d => d.weekArticleCount >= 4, lines: [
+      d => `今週は${d.weekArticleCount}本。ペースとしては悪くない。質を見ておこう。`, null, null, null, null, null, null,
+    ]},
+    { cond: d => d.weekArticleCount >= 1, lines: [
+      d => `今週は${d.weekArticleCount}本。少なめだけど、量より質が大事な週もあるよ。`, null, null, null, null, null, null,
+    ]},
+    { cond: d => true, lines: [
+      '今週は公開記事なし。準備期間かな。来週に備えよう。', null, null, null, null, null, null,
+    ]},
+  ],
+
+  // ===== Weekly Tab: カテゴリバランス (まひる=index 5) =====
+  weeklyCategoryBalance: [
+    { cond: d => d.abCount >= 2 && !d.hasCatWarning, lines: [
+      null, null, null, null, null, d => `A+B${d.abCount}本、バランスいいねぇ～。このまま続けよっか。`, null,
+    ]},
+    { cond: d => d.abCount >= 2, lines: [
+      null, null, null, null, null, d => `A+B${d.abCount}本あるね。月間の比率がちょっと偏ってるかも...のんびり見てみよっか。`, null,
+    ]},
+    { cond: d => d.abCount >= 1, lines: [
+      null, null, null, null, null, d => `A+B${d.abCount}本かぁ...もう1本あると安心だけど、無理しなくていいよ～。`, null,
+    ]},
+    { cond: d => true, lines: [
+      null, null, null, null, null, 'A+Bがないねぇ...来週は1本入れてみる？のんびりでいいからね～。', null,
+    ]},
+  ],
+
+  // ===== Weekly Tab: アクション (凛華=index 3) =====
+  weeklyAction: [
+    { cond: d => d.actionCount === 0, lines: [
+      null, null, null, '...特にやることないわね。現状維持？まあ、それも判断よ。', null, null, null,
+    ]},
+    { cond: d => d.actionCount <= 2, lines: [
+      null, null, null, d => `やること${d.actionCount}つ。...わかってるわよね？動きなさいよ。`, null, null, null,
+    ]},
+    { cond: d => true, lines: [
+      null, null, null, d => `${d.actionCount}つもあるじゃない。...全部やれとは言わないけど、優先順位くらいつけなさいよ。`, null, null, null,
+    ]},
+  ],
 };

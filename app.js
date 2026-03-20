@@ -43,8 +43,10 @@ function getMondayOf(dateStr) {
 }
 
 function getTodayJST() {
+  // Create date string in JST regardless of local timezone
   const now = new Date();
-  const jst = new Date(now.getTime() + (9 * 60 - now.getTimezoneOffset()) * 60000);
+  const utc = now.getTime() + now.getTimezoneOffset() * 60000;
+  const jst = new Date(utc + 9 * 3600000);
   return formatDate(jst);
 }
 
@@ -52,9 +54,13 @@ function getTodayJST() {
 const DAYS_JA = ['月','火','水','木','金','土','日'];
 const CHIBI_FILES = ['mon','tue','wed','thu','fri','sat','sun'];
 const CHIBI_NAMES = ['月子','陽','しずく','凛華','るな','まひる','日和'];
+const CHIBI_COLORS = ['#1e3a5f','#f97316','#60a5fa','#9b2335','#10b981','#a78bfa','#f9a8d4'];
 const TODAY_IDX = getCharIdx(getTodayJST());
 const TODAY_FILE = CHIBI_FILES[TODAY_IDX];
 const TODAY_NAME = CHIBI_NAMES[TODAY_IDX];
+
+// Set favicon to today's character
+document.getElementById('favicon').href = `images/favicon/eyes-${TODAY_FILE}.png`;
 
 function noteURL(key) { return 'https://note.com/hasyamo/n/' + key; }
 
@@ -361,7 +367,13 @@ document.querySelectorAll('.tab-bar-btn').forEach(btn => {
     document.querySelectorAll('.tab-content').forEach(tc => tc.classList.remove('active'));
     const tabId = 'tab' + btn.dataset.tab.charAt(0).toUpperCase() + btn.dataset.tab.slice(1);
     document.getElementById(tabId).classList.add('active');
-    // Re-render charts when Deep Dive becomes visible
+    // Re-render when tab becomes visible
+    if (btn.dataset.tab === 'activity' && latestSnapshot.length > 0) {
+      setTimeout(() => { renderActivityTab(); }, 50);
+    }
+    if (btn.dataset.tab === 'weekly' && latestSnapshot.length > 0) {
+      setTimeout(() => { renderWeeklyTab(); }, 50);
+    }
     if (btn.dataset.tab === 'deepdive' && latestSnapshot.length > 0) {
       setTimeout(() => {
         renderRanking();
@@ -452,15 +464,34 @@ function renderDailyTab() {
   // Set memoKey for girl-lines dynamic evaluation
   _dailyRenderData.memoKey = memoKey;
 
-  // Follower comment (using dailyFollower dynamic lines)
-  const followerComment = getGirlLineForIdx('dailyFollower', charIdx);
+  function dailyNavi(section) {
+    return weeklyNavi(charIdx, section);
+  }
 
-  // Like ranking
-  const likeRankCards = buildLikeRankHTML(latest.date);
-  const likeIntro = getGirlLineForIdx('dailyLike', charIdx);
+  // Memo card
+  const memoCard = `
+    <div class="daily-memo-arrows">リーチ${rDir}　アクション${aDir}　スキ率${eDir}</div>
+    <div class="daily-memo-comment">${memoComment}</div>
+    <div class="daily-memo-text" id="dailyMemoText" data-copy-text="${copyText.replace(/"/g,'&quot;')}" style="display:none"></div>`;
 
   // Today's article
   const todayArticleCards = buildTodayArticleHTML(latest.date);
+
+  // Like ranking
+  const likeRankCards = buildLikeRankHTML(latest.date);
+
+  let html = '';
+
+  // 1. State memo
+  html += dailyNavi('daily');
+  html += `<div class="weekly-section">${memoCard}</div>`;
+
+  // 2. Follower
+  html += dailyNavi('dailyFollower');
+  html += `<div class="weekly-section"><div class="weekly-section-title">フォロワー前日比</div>
+    <div style="font-family:var(--font-mono);font-size:20px;font-weight:700;color:var(--accent-green)">${followers.toLocaleString()} <span style="font-size:14px;color:${fDiffVal >= 5 ? 'var(--accent-green)' : fDiffVal <= -3 ? 'var(--accent-pink)' : 'var(--text-muted)'}">${fDiffVal >= 0 ? '+' : ''}${fDiffVal}</span></div></div>`;
+
+  // 3. Today's article (if exists)
   const articleLines = [
     '今日の記事、初動を確認しておこう。',
     '今日の記事、出てるよ！どんな反応かな！',
@@ -470,32 +501,17 @@ function renderDailyTab() {
     '今日の記事～。どうかな～。',
     '今日の記事が公開されていますね。',
   ];
-  const articleIntro = todayArticleCards ? articleLines[charIdx] : '';
-
-  // Build chat
-  const avatar = `<img class="daily-chat-avatar" src="images/eyes-thumb/eyes-${charFile}.webp" alt="${charName}">`;
-  function chatRow(label, text, card) {
-    const labelHTML = label ? `<div class="daily-chat-label">${label}</div>` : '';
-    return `<div class="daily-chat-row">${avatar}<div class="daily-chat-bubble">${labelHTML}<div class="daily-chat-text">${text}</div>${card ? '<div class="daily-chat-card">'+card+'</div>' : ''}</div></div>`;
+  if (todayArticleCards) {
+    html += `<div class="weekly-navi"><img class="weekly-navi-img" src="images/eyes-thumb/eyes-${charFile}.webp" alt="${charName}"><div class="weekly-navi-body"><div class="weekly-navi-name">${charName}</div><div class="weekly-navi-line">${articleLines[charIdx]}</div></div></div>`;
+    html += `<div class="weekly-section"><div class="weekly-section-title">今日の記事</div>${todayArticleCards}</div>`;
   }
 
-  const memoCard = `
-    <div class="daily-memo-row">
-      <div class="daily-memo-text" id="dailyMemoText" data-copy-text="${copyText.replace(/"/g,'&quot;')}">${latest.date} | リーチ${rDir} アクション${aDir} スキ率${eDir} | ${memoComment}</div>
-      <button class="commentary-copy" onclick="copyDailyMemo()">Copy</button>
-    </div>
-    <div class="daily-memo-nav">
-      <button class="commentary-nav" onclick="navigateDailyDate(-1)" id="dailyPrev" title="前日">&lt;</button>
-      <button class="commentary-nav" onclick="navigateDailyDate(1)" id="dailyNext" title="翌日">&gt;</button>
-    </div>`;
+  // 4. Like ranking
+  html += dailyNavi('dailyLike');
+  html += `<div class="weekly-section"><div class="weekly-section-title">スキ増ベスト3 <span style="font-size:11px;font-weight:400;color:var(--text-muted)">前日比</span></div>${likeRankCards || '<div style="color:var(--text-muted);font-size:13px">スキの動きなし</div>'}</div>`;
 
-  let html = '';
-  html += chatRow('', getGirlLineForIdx('daily', charIdx), memoCard);
-  html += chatRow('', followerComment, '');
-  if (todayArticleCards) html += chatRow('', articleIntro, todayArticleCards);
-  html += chatRow('', likeIntro, likeRankCards || '');
-
-  document.getElementById('dailyChat').innerHTML = html;
+  document.getElementById('dailyContent').innerHTML = html;
+  document.getElementById('dailyDate').textContent = getDayLabel(latest.date);
   document.getElementById('dailyPrev').disabled = (idx <= 1);
   document.getElementById('dailyNext').disabled = (idx >= src.length - 1);
 
@@ -566,7 +582,7 @@ function getLikeDiffs(dataDate) {
   const prv = articlesData.filter(a => a.date === prevDate);
   const prevMap = {}; prv.forEach(a => { prevMap[a.key] = a.like_count; });
   return cur
-    .map(a => ({ key:a.key, title:a.title, category:a.category, published_at:a.published_at||'', likeDiff:a.like_count-(prevMap[a.key]||0) }))
+    .map(a => ({ key:a.key, title:a.title, category:a.category, published_at:a.published_at||'', likeCount:a.like_count, likeDiff:a.like_count-(prevMap[a.key]||0) }))
     .filter(a => a.likeDiff > 0).sort((a,b) => b.likeDiff - a.likeDiff).slice(0, 3);
 }
 
@@ -578,9 +594,941 @@ function buildLikeRankHTML(dataDate) {
     const ps = d.published_at ? d.published_at.slice(0,10) : '';
     let pub = ps;
     if (ps) { pub = getDayLabel(ps); }
-    return `<div class="daily-like-item"><div class="daily-like-rank">${i+1}</div><div class="daily-like-info"><div class="daily-like-title"><span class="cat-badge" style="color:${catColor}">${d.category}</span> ${d.title}</div>${pub?`<div style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted);margin-top:3px">公開 ${pub}</div>`:''}</div><div class="daily-like-diff">+${d.likeDiff}</div></div>`;
+    return `<div class="daily-like-item"><div class="daily-like-rank">${i+1}</div><div class="daily-like-info"><div class="daily-like-title"><span class="cat-badge" style="color:${catColor}">${d.category}</span> ${d.title}</div>${pub?`<div style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted);margin-top:3px">公開 ${pub}</div>`:''}</div><div style="text-align:right"><div class="daily-like-diff">+${d.likeDiff}</div><div style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted)">計${d.likeCount}</div></div></div>`;
   }).join('')}</div>`;
 }
+
+// ===== Weekly Tab Rendering =====
+
+// ===== Activity Tab Rendering =====
+
+function renderActivityTab() {
+  const week = getWeekRange();
+  if (!week.start) return;
+
+  const src = summaryData.length > 0 ? summaryData : dailySummary;
+  const last28 = src.slice(-28);
+  const followerGrowth4w = last28.length >= 2 ? (last28[last28.length-1].followerCount||0) - (last28[0].followerCount||0) : 0;
+
+  const peopleStats = computeWeeklyPeople(week);
+
+  const savedData = _dailyRenderData;
+  _dailyRenderData = {
+    followerGrowth4w,
+    newLikerCount: peopleStats.newList.length,
+    returnCount: peopleStats.returnList.length,
+    regularCount: peopleStats.regList.length,
+    atRiskCount: peopleStats.atRiskUsers.length,
+  };
+
+  const latest = last28[last28.length - 1];
+  const first = last28[0];
+  const fDiff = (latest.followerCount || 0) - (first.followerCount || 0);
+  const fSign = fDiff >= 0 ? '+' : '';
+
+  let html = '';
+
+  // 1. Follower chart (陽=1)
+  html += weeklyNavi(1, 'weeklyFollower');
+  html += `<div class="weekly-section">
+    <div class="weekly-section-title">フォロワー推移（4週間）<span style="margin-left:12px;color:${fDiff >= 0 ? 'var(--accent-green)' : 'var(--accent-pink)'};font-size:13px">${latest.followerCount}人（${fSign}${fDiff}）</span></div>
+    <div class="weekly-follower-chart"><canvas id="activityFollowerCanvas"></canvas></div>
+  </div>`;
+
+  // 2. People (るな=4, しずく=2)
+  html += weeklyNavi(4, 'weeklyNewLikers');
+  html += weeklyNavi(2, 'weeklyRegulars');
+  html += `<div class="weekly-section">
+    <div class="weekly-section-title">今週のスキしてくれた人 <span style="font-size:12px;color:var(--text-muted);font-weight:400">${week.start}〜${week.end}</span></div>
+    <div class="weekly-people-tabs">
+      <button class="weekly-people-tab active" onclick="switchWeeklyPeopleTab(this,'new')">新規（${peopleStats.newList.length}）</button>
+      <button class="weekly-people-tab" onclick="switchWeeklyPeopleTab(this,'return')">復帰（${peopleStats.returnList.length}）</button>
+      <button class="weekly-people-tab" onclick="switchWeeklyPeopleTab(this,'regular')">常連（${peopleStats.regList.length}）</button>
+      <button class="weekly-people-tab" onclick="switchWeeklyPeopleTab(this,'occasional')">たまに（${peopleStats.occasionalList.length}）</button>
+    </div>
+    <div class="weekly-people-content" data-tab="new">${buildWeeklyPeopleHTML(peopleStats, 'new', week)}</div>
+    <div class="weekly-people-content" data-tab="return" style="display:none">${buildWeeklyPeopleHTML(peopleStats, 'return', week)}</div>
+    <div class="weekly-people-content" data-tab="regular" style="display:none">${buildWeeklyPeopleHTML(peopleStats, 'regular', week)}</div>
+    <div class="weekly-people-content" data-tab="occasional" style="display:none">${buildWeeklyPeopleHTML(peopleStats, 'occasional', week)}</div>
+  </div>`;
+
+  // 3. At risk (日和=6)
+  html += weeklyNavi(6, 'weeklyAtRisk');
+  html += `<div class="weekly-section">
+    <div class="weekly-section-title" style="color:var(--accent-amber)">離脱危機</div>
+    ${buildWeeklyAtRiskHTML(peopleStats)}
+  </div>`;
+
+  _dailyRenderData = savedData;
+
+  document.getElementById('activityContent').innerHTML = html;
+
+  // Draw follower chart
+  setTimeout(() => { drawActivityFollowerChart(); }, 50);
+  loadWeeklyAvatars();
+}
+
+function drawActivityFollowerChart() {
+  const src = summaryData.length > 0 ? summaryData : dailySummary;
+  if (src.length < 2) return;
+  const last28 = src.slice(-28);
+  const labels = last28.map(d => d.date.slice(5));
+  const values = last28.map(d => d.followerCount || 0);
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const PINK = '#fd79a8';
+  const canvas = document.getElementById('activityFollowerCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.parentElement.clientWidth;
+  const H = 180;
+  canvas.width = W * 2; canvas.height = H * 2;
+  canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
+  ctx.scale(2, 2);
+  const pad = { t: 10, b: 30, l: 40, r: 10 };
+  const cw = W - pad.l - pad.r;
+  const ch = H - pad.t - pad.b;
+  const range = max - min || 1;
+  ctx.strokeStyle = '#2a2a3a'; ctx.lineWidth = 0.5;
+  for (let i = 0; i <= 4; i++) {
+    const y = pad.t + ch * i / 4;
+    ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(W - pad.r, y); ctx.stroke();
+    ctx.fillStyle = '#666'; ctx.font = '10px JetBrains Mono'; ctx.textAlign = 'right';
+    ctx.fillText(Math.round(max - range * i / 4), pad.l - 4, y + 4);
+  }
+  ctx.fillStyle = '#666'; ctx.font = '9px JetBrains Mono'; ctx.textAlign = 'center';
+  const step = Math.max(1, Math.floor(labels.length / 6));
+  labels.forEach((l, i) => { if (i % step === 0 || i === labels.length - 1) ctx.fillText(l, pad.l + cw * i / (labels.length - 1), H - 8); });
+  ctx.strokeStyle = '#3a3a4a'; ctx.lineWidth = 0.5; ctx.setLineDash([4, 4]);
+  last28.forEach((d, i) => { if (parseDate(d.date).getDay() === 1) { const x = pad.l + cw * i / (values.length - 1); ctx.beginPath(); ctx.moveTo(x, pad.t); ctx.lineTo(x, pad.t + ch); ctx.stroke(); } });
+  ctx.setLineDash([]);
+  ctx.beginPath();
+  values.forEach((v, i) => { const x = pad.l + cw * i / (values.length - 1); const y = pad.t + ch * (1 - (v - min) / range); i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); });
+  ctx.lineTo(pad.l + cw, pad.t + ch); ctx.lineTo(pad.l, pad.t + ch); ctx.closePath();
+  const grad = ctx.createLinearGradient(0, pad.t, 0, pad.t + ch);
+  grad.addColorStop(0, 'rgba(253,121,168,0.25)'); grad.addColorStop(1, 'rgba(253,121,168,0.02)');
+  ctx.fillStyle = grad; ctx.fill();
+  ctx.beginPath();
+  values.forEach((v, i) => { const x = pad.l + cw * i / (values.length - 1); const y = pad.t + ch * (1 - (v - min) / range); i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); });
+  ctx.strokeStyle = PINK; ctx.lineWidth = 2.5; ctx.lineJoin = 'round'; ctx.stroke();
+  const lx = pad.l + cw; const ly = pad.t + ch * (1 - (values[values.length - 1] - min) / range);
+  ctx.beginPath(); ctx.arc(lx, ly, 4, 0, Math.PI * 2); ctx.fillStyle = PINK; ctx.fill();
+}
+
+let _weeklyRenderData = {};
+
+function weeklyNavi(charIdx, section) {
+  const charFile = CHIBI_FILES[charIdx];
+  const charName = CHIBI_NAMES[charIdx];
+  const line = getGirlLineForIdx(section, charIdx);
+  return `<div class="weekly-navi">
+    <img class="weekly-navi-img" src="images/eyes-thumb/eyes-${charFile}.webp" alt="${charName}">
+    <div class="weekly-navi-body">
+      <div class="weekly-navi-name">${charName}</div>
+      <div class="weekly-navi-line">${line}</div>
+    </div>
+  </div>`;
+}
+
+function renderWeeklyTab() {
+  const src = summaryData.length > 0 ? summaryData : dailySummary;
+  if (src.length < 2) return;
+
+  const week = getWeekRange();
+  if (!week.start) return;
+
+  const last28 = src.slice(-28);
+  const followerGrowth4w = last28.length >= 2 ? (last28[last28.length-1].followerCount||0) - (last28[0].followerCount||0) : 0;
+  const peopleStats = computeWeeklyPeople(week);
+
+  const weekArticles = latestSnapshot.filter(a => {
+    const pub = a.published_at ? a.published_at.slice(0, 10) : '';
+    return pub >= week.start && pub <= week.end;
+  });
+  const catCounts = {};
+  weekArticles.forEach(a => { catCounts[a.category] = (catCounts[a.category] || 0) + 1; });
+  const abCount = (catCounts['A'] || 0) + (catCounts['B'] || 0);
+
+  const monthAgo = formatDate(new Date(parseDate(week.dataDate).getTime() - 29 * 86400000));
+  const monthArticles = latestSnapshot.filter(a => {
+    const pub = a.published_at ? a.published_at.slice(0, 10) : '';
+    return pub >= monthAgo && pub <= week.dataDate;
+  });
+  const monthCats = {};
+  monthArticles.forEach(a => { monthCats[a.category] = (monthCats[a.category] || 0) + 1; });
+  const MONTHLY_IDEAL = { A: [2,3], B: [5,8], C: [3,4], D: [4,4], E: [1,2], G: [0,1] };
+  const hasCatWarning = Object.entries(MONTHLY_IDEAL).some(([c, [lo]]) => (monthCats[c] || 0) < lo);
+
+  const actions = [];
+  if (abCount < 2) actions.push('来週7本の中にA or Bを2本以上入れる');
+  Object.entries(MONTHLY_IDEAL).forEach(([c, [lo]]) => {
+    if ((monthCats[c] || 0) < lo) actions.push(`${c}(${getCategoryName(c)})が月間で不足気味 → 意識的に配置`);
+  });
+  if (actions.length === 0) actions.push('現状の書き方を継続');
+
+  _weeklyRenderData = {
+    followerGrowth4w,
+    newLikerCount: peopleStats.newList.length,
+    returnCount: peopleStats.returnList.length,
+    regularCount: peopleStats.regList.length,
+    atRiskCount: peopleStats.atRiskUsers.length,
+    weekArticleCount: weekArticles.length,
+    abCount, hasCatWarning,
+    actionCount: actions.length,
+  };
+
+  const savedData = _dailyRenderData;
+  _dailyRenderData = _weeklyRenderData;
+
+  const latest = last28[last28.length - 1];
+  const first = last28[0];
+  const fDiff = (latest.followerCount || 0) - (first.followerCount || 0);
+  const fSign = fDiff >= 0 ? '+' : '';
+
+  document.getElementById('weeklyFollowerChart').innerHTML = '';
+  document.getElementById('weeklyHighlight').innerHTML = '';
+
+  // 5. Articles (月子=0)
+  document.getElementById('weeklyCategoryBalance').innerHTML = `
+    ${weeklyNavi(0, 'weeklyArticles')}
+    <div class="weekly-section">
+      <div class="weekly-section-title">今週の記事（${weekArticles.length}本）</div>
+      ${buildWeeklyArticlesHTML(weekArticles, week)}
+    </div>`;
+
+  // 6. Category balance (まひる=5) + 7. Action (凛華=3)
+  document.getElementById('weeklyAction').innerHTML = `
+    ${weeklyNavi(5, 'weeklyCategoryBalance')}
+    <div class="weekly-section">
+      <div class="weekly-section-title">カテゴリバランス</div>
+      ${buildWeeklyCatBalanceHTML(weekArticles, catCounts, abCount, monthArticles, monthCats, MONTHLY_IDEAL)}
+    </div>
+
+    ${weeklyNavi(3, 'weeklyAction')}
+    <div class="weekly-section">
+      <div class="weekly-action-label">祈るな、設計しろ。</div>
+      ${buildWeeklyActionHTML(actions)}
+    </div>`;
+
+  _dailyRenderData = savedData;
+
+}
+
+// --- Follower chart draw (called after DOM render) ---
+function drawWeeklyFollowerChart() {
+  const src = summaryData.length > 0 ? summaryData : dailySummary;
+  if (src.length < 2) return;
+  const last28 = src.slice(-28);
+  const labels = last28.map(d => d.date.slice(5));
+  const values = last28.map(d => d.followerCount || 0);
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+
+  const PINK = '#fd79a8';
+  const canvas = document.getElementById('weeklyFollowerCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.parentElement.clientWidth;
+  const H = 180;
+  canvas.width = W * 2; canvas.height = H * 2;
+  canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
+  ctx.scale(2, 2);
+  const pad = { t: 10, b: 30, l: 40, r: 10 };
+  const cw = W - pad.l - pad.r;
+  const ch = H - pad.t - pad.b;
+  const range = max - min || 1;
+
+  ctx.strokeStyle = '#2a2a3a'; ctx.lineWidth = 0.5;
+  for (let i = 0; i <= 4; i++) {
+    const y = pad.t + ch * i / 4;
+    ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(W - pad.r, y); ctx.stroke();
+    ctx.fillStyle = '#666'; ctx.font = '10px JetBrains Mono'; ctx.textAlign = 'right';
+    ctx.fillText(Math.round(max - range * i / 4), pad.l - 4, y + 4);
+  }
+  ctx.fillStyle = '#666'; ctx.font = '9px JetBrains Mono'; ctx.textAlign = 'center';
+  const step = Math.max(1, Math.floor(labels.length / 6));
+  labels.forEach((l, i) => { if (i % step === 0 || i === labels.length - 1) ctx.fillText(l, pad.l + cw * i / (labels.length - 1), H - 8); });
+
+  ctx.strokeStyle = '#3a3a4a'; ctx.lineWidth = 0.5; ctx.setLineDash([4, 4]);
+  last28.forEach((d, i) => {
+    if (parseDate(d.date).getDay() === 1) {
+      const x = pad.l + cw * i / (values.length - 1);
+      ctx.beginPath(); ctx.moveTo(x, pad.t); ctx.lineTo(x, pad.t + ch); ctx.stroke();
+    }
+  });
+  ctx.setLineDash([]);
+
+  ctx.beginPath();
+  values.forEach((v, i) => { const x = pad.l + cw * i / (values.length - 1); const y = pad.t + ch * (1 - (v - min) / range); i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); });
+  ctx.lineTo(pad.l + cw, pad.t + ch); ctx.lineTo(pad.l, pad.t + ch); ctx.closePath();
+  const grad = ctx.createLinearGradient(0, pad.t, 0, pad.t + ch);
+  grad.addColorStop(0, 'rgba(253,121,168,0.25)'); grad.addColorStop(1, 'rgba(253,121,168,0.02)');
+  ctx.fillStyle = grad; ctx.fill();
+
+  ctx.beginPath();
+  values.forEach((v, i) => { const x = pad.l + cw * i / (values.length - 1); const y = pad.t + ch * (1 - (v - min) / range); i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); });
+  ctx.strokeStyle = PINK; ctx.lineWidth = 2.5; ctx.lineJoin = 'round'; ctx.stroke();
+
+  const lx = pad.l + cw; const ly = pad.t + ch * (1 - (values[values.length - 1] - min) / range);
+  ctx.beginPath(); ctx.arc(lx, ly, 4, 0, Math.PI * 2); ctx.fillStyle = PINK; ctx.fill();
+}
+
+// --- People classification ---
+function computeWeeklyPeople(week) {
+  if (likesData.length === 0) return { newList: [], returnList: [], regList: [], occasionalList: [], atRiskUsers: [] };
+
+  const userWeeks = {};
+  const thisWeekLikes = [];
+  likesData.forEach(l => {
+    const likedDate = (l.liked_at || '').slice(0, 10);
+    const uid = l.like_user_id;
+    const likeWeek = getMondayOf(likedDate);
+    if (!userWeeks[uid]) userWeeks[uid] = new Set();
+    userWeeks[uid].add(likeWeek);
+    if (likedDate >= week.start && likedDate <= week.end) thisWeekLikes.push(l);
+  });
+
+  const prevWeeks = [];
+  let w = parseDate(week.start);
+  for (let i = 0; i < 4; i++) { w.setDate(w.getDate() - 7); prevWeeks.push(formatDate(w)); }
+
+  const classified = {};
+  thisWeekLikes.forEach(l => {
+    const uid = l.like_user_id;
+    if (!classified[uid]) {
+      const weeks = userWeeks[uid] || new Set();
+      const hasBeforeThisWeek = [...weeks].some(w => w < week.start);
+      const recentActiveWeeks = prevWeeks.filter(pw => weeks.has(pw)).length;
+      let category;
+      if (!hasBeforeThisWeek) category = 'new';
+      else if (recentActiveWeeks >= 3) category = 'regular';
+      else if (recentActiveWeeks === 0) category = 'return';
+      else category = 'occasional';
+      classified[uid] = { id: uid, name: l.like_username || l.like_user_urlname || uid, urlname: l.like_user_urlname || '', followerCount: parseInt(l.follower_count) || 0, articles: [], latestLike: '', category };
+    }
+    const noteKey = l.note_key;
+    const artInfo = categoryTitleMap[noteKey];
+    const title = artInfo ? artInfo.title : noteKey;
+    if (!classified[uid].articles.includes(title)) classified[uid].articles.push(title);
+    const likedDate = (l.liked_at || '').slice(0, 10);
+    if (!classified[uid].latestLike || likedDate > classified[uid].latestLike) classified[uid].latestLike = likedDate;
+  });
+
+  const olderWeeks = [];
+  let w2 = parseDate(week.start);
+  for (let i = 0; i < 8; i++) { w2.setDate(w2.getDate() - 7); if (i >= 4) olderWeeks.push(formatDate(w2)); }
+
+  const atRiskUsers = [];
+  Object.entries(userWeeks).forEach(([uid, weeks]) => {
+    if (classified[uid]) return;
+    const recentActive = prevWeeks.filter(pw => weeks.has(pw)).length;
+    const olderActive = olderWeeks.filter(ow => weeks.has(ow)).length;
+    if (recentActive === 0 && olderActive >= 2) {
+      const lastLike = likesData.filter(l => l.like_user_id === uid).pop();
+      if (lastLike) atRiskUsers.push({ id: uid, name: lastLike.like_username || lastLike.like_user_urlname || uid, urlname: lastLike.like_user_urlname || '', followerCount: parseInt(lastLike.follower_count) || 0, lastSeen: [...weeks].sort().pop() });
+    }
+  });
+  atRiskUsers.sort((a, b) => b.followerCount - a.followerCount);
+
+  const sortPeople = (a, b) => b.articles.length - a.articles.length || (b.latestLike || '').localeCompare(a.latestLike || '') || b.followerCount - a.followerCount;
+  const allClassified = Object.values(classified).sort(sortPeople);
+  return {
+    newList: allClassified.filter(p => p.category === 'new'),
+    returnList: allClassified.filter(p => p.category === 'return'),
+    regList: allClassified.filter(p => p.category === 'regular'),
+    occasionalList: allClassified.filter(p => p.category === 'occasional'),
+    atRiskUsers,
+  };
+}
+
+function personCardHTML(person) {
+  const profileUrl = person.urlname ? `https://note.com/${person.urlname}` : '#';
+  return `
+    <div class="weekly-person">
+      <img class="weekly-person-avatar" data-urlname="${person.urlname}" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='36' height='36'%3E%3Crect fill='%23333' width='36' height='36' rx='18'/%3E%3C/svg%3E" alt="">
+      <div class="weekly-person-name">
+        <a href="${profileUrl}" target="_blank" rel="noopener">${person.name}</a>
+        <div class="weekly-person-articles">${person.articles.map(a => `<div class="weekly-person-article-item">${a}</div>`).join('')}</div>
+      </div>
+      <div class="weekly-person-stats">
+        <div>${person.articles.length}記事</div>
+        <div>${person.followerCount.toLocaleString()} followers</div>
+      </div>
+    </div>`;
+}
+
+function buildWeeklyPeopleHTML(stats, mode, week) {
+  const listMap = { new: stats.newList, return: stats.returnList, regular: stats.regList, occasional: stats.occasionalList };
+  const emptyMap = { new: '今週の新規スキなし', return: '復帰なし', regular: '常連なし', occasional: '該当なし' };
+  const list = (listMap[mode] || []).slice(0, 15);
+  return list.length > 0 ? list.map(p => personCardHTML(p)).join('') : `<div style="color:var(--text-muted);font-size:13px;padding:8px 0">${emptyMap[mode] || '該当なし'}</div>`;
+}
+
+function buildWeeklyAtRiskHTML(stats) {
+  if (stats.atRiskUsers.length === 0) return '<div style="color:var(--text-muted);font-size:13px;padding:8px 0">離脱危機ユーザーなし</div>';
+  return stats.atRiskUsers.slice(0, 10).map(p => {
+    const profileUrl = p.urlname ? `https://note.com/${p.urlname}` : '#';
+    return `
+      <div class="weekly-person">
+        <img class="weekly-person-avatar" data-urlname="${p.urlname}" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='36' height='36'%3E%3Crect fill='%23333' width='36' height='36' rx='18'/%3E%3C/svg%3E" alt="">
+        <div class="weekly-person-name">
+          <a href="${profileUrl}" target="_blank" rel="noopener">${p.name}</a>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:2px">最終スキ: ${p.lastSeen}</div>
+        </div>
+        <div class="weekly-person-stats"><div>${p.followerCount.toLocaleString()} followers</div></div>
+      </div>`;
+  }).join('');
+}
+
+function buildWeeklyArticlesHTML(weekArticles, week) {
+  if (weekArticles.length === 0) return '<div style="color:var(--text-muted);font-size:13px">今週の公開記事なし</div>';
+  const articlePeopleCounts = {};
+  if (likesData.length > 0) {
+    const beforeWeek = new Set();
+    likesData.forEach(l => { const ld = (l.liked_at || '').slice(0, 10); if (ld < week.start) beforeWeek.add(l.like_user_id); });
+    likesData.forEach(l => {
+      const ld = (l.liked_at || '').slice(0, 10);
+      if (ld >= week.start && ld <= week.end) {
+        const key = l.note_key;
+        if (!articlePeopleCounts[key]) articlePeopleCounts[key] = { newCount: 0, regCount: 0 };
+        if (beforeWeek.has(l.like_user_id)) articlePeopleCounts[key].regCount++; else articlePeopleCounts[key].newCount++;
+      }
+    });
+  }
+  return weekArticles.sort((a, b) => (a.published_at || '').localeCompare(b.published_at || '')).map(a => {
+    const catColor = getCategoryColor(a.category);
+    const pub = a.published_at ? getDayLabel(a.published_at.slice(0, 10)) : '';
+    const pc = articlePeopleCounts[a.key] || { newCount: 0, regCount: 0 };
+    return `<div class="weekly-article-row">
+      <div class="weekly-article-title"><span class="cat-badge" style="color:${catColor}">${a.category}</span> ${a.title}<div style="font-size:11px;color:var(--text-muted);margin-top:2px">${pub}</div></div>
+      <div class="weekly-article-stat">PV ${a.read_count}</div>
+      <div class="weekly-article-stat">スキ ${a.like_count}</div>
+      <div class="weekly-article-people"><span style="color:var(--accent-green)">新${pc.newCount}</span> / <span style="color:var(--accent-cyan)">固${pc.regCount}</span></div>
+    </div>`;
+  }).join('');
+}
+
+function buildWeeklyCatBalanceHTML(weekArticles, catCounts, abCount, monthArticles, monthCats, MONTHLY_IDEAL) {
+  const CAT_ORDER = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
+  const total = weekArticles.length || 1;
+  const barHTML = CAT_ORDER.filter(c => catCounts[c]).map(c =>
+    `<div class="weekly-cat-bar-seg" style="width:${(catCounts[c]/total*100).toFixed(1)}%;background:${getCategoryColor(c)}">${c}</div>`
+  ).join('');
+  const listHTML = CAT_ORDER.filter(c => catCounts[c]).map(c =>
+    `<div class="weekly-cat-item"><div class="weekly-cat-dot" style="background:${getCategoryColor(c)}"></div>${c} ${getCategoryName(c)}: ${catCounts[c]}本</div>`
+  ).join('');
+  const abCls = abCount >= 2 ? 'ok' : 'warn';
+  const abMsg = abCount >= 2 ? `✅ A+B = ${abCount}本（一次情報ゾーン維持）` : `⚠️ A+B = ${abCount}本（2本未満。来週はA or Bを増やす）`;
+  const monthHTML = Object.entries(MONTHLY_IDEAL).map(([c, [lo, hi]]) => {
+    const actual = monthCats[c] || 0;
+    let judge = '✅';
+    if (actual < lo) judge = '⚠️ 少ない'; else if (actual > hi) judge = '📝 多め';
+    return `<div class="weekly-cat-item"><div class="weekly-cat-dot" style="background:${getCategoryColor(c)}"></div>${c} ${getCategoryName(c)}: ${actual}本 <span class="weekly-cat-ideal">(理想${lo}〜${hi}) ${judge}</span></div>`;
+  }).join('');
+  return `
+    <div class="weekly-cat-bar">${barHTML}</div>
+    <div class="weekly-cat-list">${listHTML}</div>
+    <div class="weekly-ab-status ${abCls}">${abMsg}</div>
+    <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px">月間カテゴリ比率（直近30日: ${monthArticles.length}本）</div>
+      <div class="weekly-cat-list">${monthHTML}</div>
+    </div>`;
+}
+
+function buildWeeklyActionHTML(actions) {
+  return `<div class="weekly-action-list">${actions.map(a => `<div class="weekly-action-item">${a}</div>`).join('')}</div>`;
+}
+
+function getWeekRange() {
+  // Latest data date's week (Mon-Sun)
+  const src = summaryData.length > 0 ? summaryData : dailySummary;
+  if (src.length === 0) return { start: '', end: '', dataDate: '' };
+  const dataDate = src[src.length - 1].date;
+  const monday = getMondayOf(dataDate);
+  const mondayDate = parseDate(monday);
+  const sunday = new Date(mondayDate);
+  sunday.setDate(sunday.getDate() + 6);
+  return { start: monday, end: formatDate(sunday), dataDate };
+}
+
+// --- Old weekly functions (replaced by chat-style rendering above) ---
+// Kept only switchWeeklyPeopleTab and getProfileImageUrl
+
+function _unused_renderWeeklyFollowerChart() {
+  const el = document.getElementById('weeklyFollowerChart');
+  const src = summaryData.length > 0 ? summaryData : dailySummary;
+  if (src.length < 2) { el.innerHTML = ''; return; }
+
+  // Last 28 days
+  const last28 = src.slice(-28);
+  const latest = last28[last28.length - 1];
+  const first = last28[0];
+  const diff = (latest.followerCount || 0) - (first.followerCount || 0);
+  const sign = diff >= 0 ? '+' : '';
+
+  // Build chart with canvas
+  const labels = last28.map(d => d.date.slice(5)); // MM-DD
+  const values = last28.map(d => d.followerCount || 0);
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+
+  el.innerHTML = `
+    <div class="weekly-section">
+      <div class="weekly-section-title">フォロワー推移（4週間）<span style="margin-left:12px;color:${diff >= 0 ? 'var(--accent-green)' : 'var(--accent-pink)'};font-size:13px">${latest.followerCount}人（${sign}${diff}）</span></div>
+      <div class="weekly-follower-chart">
+        <canvas id="weeklyFollowerCanvas"></canvas>
+      </div>
+    </div>`;
+
+  // Draw chart (wrapped style)
+  const PINK = '#fd79a8';
+  const canvas = document.getElementById('weeklyFollowerCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.parentElement.clientWidth;
+  const H = 180;
+  canvas.width = W * 2; canvas.height = H * 2;
+  canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
+  ctx.scale(2, 2);
+
+  const pad = { t: 10, b: 30, l: 40, r: 10 };
+  const cw = W - pad.l - pad.r;
+  const ch = H - pad.t - pad.b;
+  const range = max - min || 1;
+
+  // Grid lines
+  ctx.strokeStyle = '#2a2a3a';
+  ctx.lineWidth = 0.5;
+  for (let i = 0; i <= 4; i++) {
+    const y = pad.t + ch * i / 4;
+    ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(W - pad.r, y); ctx.stroke();
+    ctx.fillStyle = '#666'; ctx.font = '10px JetBrains Mono'; ctx.textAlign = 'right';
+    ctx.fillText(Math.round(max - range * i / 4), pad.l - 4, y + 4);
+  }
+
+  // X labels
+  ctx.fillStyle = '#666'; ctx.font = '9px JetBrains Mono'; ctx.textAlign = 'center';
+  const step = Math.max(1, Math.floor(labels.length / 6));
+  labels.forEach((l, i) => {
+    if (i % step === 0 || i === labels.length - 1) {
+      const x = pad.l + cw * i / (labels.length - 1);
+      ctx.fillText(l, x, H - 8);
+    }
+  });
+
+  // Monday markers (week separators)
+  ctx.strokeStyle = '#3a3a4a';
+  ctx.lineWidth = 0.5;
+  ctx.setLineDash([4, 4]);
+  last28.forEach((d, i) => {
+    if (parseDate(d.date).getDay() === 1) {
+      const x = pad.l + cw * i / (values.length - 1);
+      ctx.beginPath(); ctx.moveTo(x, pad.t); ctx.lineTo(x, pad.t + ch); ctx.stroke();
+    }
+  });
+  ctx.setLineDash([]);
+
+  // Fill gradient
+  ctx.beginPath();
+  values.forEach((v, i) => {
+    const x = pad.l + cw * i / (values.length - 1);
+    const y = pad.t + ch * (1 - (v - min) / range);
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.lineTo(pad.l + cw, pad.t + ch);
+  ctx.lineTo(pad.l, pad.t + ch);
+  ctx.closePath();
+  const grad = ctx.createLinearGradient(0, pad.t, 0, pad.t + ch);
+  grad.addColorStop(0, 'rgba(253,121,168,0.25)');
+  grad.addColorStop(1, 'rgba(253,121,168,0.02)');
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // Line
+  ctx.beginPath();
+  values.forEach((v, i) => {
+    const x = pad.l + cw * i / (values.length - 1);
+    const y = pad.t + ch * (1 - (v - min) / range);
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.strokeStyle = PINK;
+  ctx.lineWidth = 2.5;
+  ctx.lineJoin = 'round';
+  ctx.stroke();
+
+  // End dot
+  const lx = pad.l + cw;
+  const ly = pad.t + ch * (1 - (values[values.length - 1] - min) / range);
+  ctx.beginPath(); ctx.arc(lx, ly, 4, 0, Math.PI * 2);
+  ctx.fillStyle = PINK; ctx.fill();
+}
+
+// --- 2. People (new/regular) ---
+function renderWeeklyPeople() {
+  const el = document.getElementById('weeklyHighlight');
+  if (likesData.length === 0) { el.innerHTML = '<div class="weekly-section"><div class="weekly-section-title">今週のスキしてくれた人</div><div style="color:var(--text-muted);font-size:13px">likes.csv データなし</div></div>'; return; }
+
+  const week = getWeekRange();
+  if (!week.start) { el.innerHTML = ''; return; }
+
+  // Build per-user weekly activity history
+  const userWeeks = {}; // uid → Set of week-start dates they liked in
+  const thisWeekLikes = [];
+
+  likesData.forEach(l => {
+    const likedDate = (l.liked_at || '').slice(0, 10);
+    const uid = l.like_user_id;
+    const likeWeek = getMondayOf(likedDate);
+    if (!userWeeks[uid]) userWeeks[uid] = new Set();
+    userWeeks[uid].add(likeWeek);
+    if (likedDate >= week.start && likedDate <= week.end) {
+      thisWeekLikes.push(l);
+    }
+  });
+
+  // Recent 4 weeks (before this week)
+  const prevWeeks = [];
+  let w = parseDate(week.start);
+  for (let i = 0; i < 4; i++) {
+    w.setDate(w.getDate() - 7);
+    prevWeeks.push(formatDate(w));
+  }
+
+  // Classify this week's likes
+  const classified = {}; // uid → { ...person, category }
+
+  thisWeekLikes.forEach(l => {
+    const uid = l.like_user_id;
+    if (!classified[uid]) {
+      const weeks = userWeeks[uid] || new Set();
+      const hasBeforeThisWeek = [...weeks].some(w => w < week.start);
+      const recentActiveWeeks = prevWeeks.filter(pw => weeks.has(pw)).length;
+
+      let category;
+      if (!hasBeforeThisWeek) {
+        category = 'new'; // 今週初めて
+      } else if (recentActiveWeeks >= 3) {
+        category = 'regular'; // 直近4週のうち3週以上
+      } else if (recentActiveWeeks === 0) {
+        category = 'return'; // 直近4週スキなし→今週復帰
+      } else {
+        category = 'occasional'; // たまに
+      }
+
+      classified[uid] = {
+        id: uid,
+        name: l.like_username || l.like_user_urlname || uid,
+        urlname: l.like_user_urlname || '',
+        followerCount: parseInt(l.follower_count) || 0,
+        articles: [],
+        latestLike: '',
+        category,
+      };
+    }
+    const noteKey = l.note_key;
+    const artInfo = categoryTitleMap[noteKey];
+    const title = artInfo ? artInfo.title : noteKey;
+    if (!classified[uid].articles.includes(title)) {
+      classified[uid].articles.push(title);
+    }
+    const likedDate = (l.liked_at || '').slice(0, 10);
+    if (!classified[uid].latestLike || likedDate > classified[uid].latestLike) {
+      classified[uid].latestLike = likedDate;
+    }
+  });
+
+  // Detect 離脱危機: users who were active in 3+ of prev weeks 5-8, but 0 in prev weeks 1-4 and not this week
+  const olderWeeks = [];
+  let w2 = parseDate(week.start);
+  for (let i = 0; i < 8; i++) {
+    w2.setDate(w2.getDate() - 7);
+    if (i >= 4) olderWeeks.push(formatDate(w2));
+  }
+
+  const atRiskUsers = [];
+  Object.entries(userWeeks).forEach(([uid, weeks]) => {
+    if (classified[uid]) return; // Already liked this week
+    const recentActive = prevWeeks.filter(pw => weeks.has(pw)).length;
+    const olderActive = olderWeeks.filter(ow => weeks.has(ow)).length;
+    if (recentActive === 0 && olderActive >= 2) {
+      // Find user info from last like
+      const lastLike = likesData.filter(l => l.like_user_id === uid).pop();
+      if (lastLike) {
+        atRiskUsers.push({
+          id: uid,
+          name: lastLike.like_username || lastLike.like_user_urlname || uid,
+          urlname: lastLike.like_user_urlname || '',
+          followerCount: parseInt(lastLike.follower_count) || 0,
+          lastSeen: [...weeks].sort().pop(),
+        });
+      }
+    }
+  });
+  atRiskUsers.sort((a, b) => b.followerCount - a.followerCount);
+
+  const sortPeople = (a, b) =>
+    b.articles.length - a.articles.length ||
+    (b.latestLike || '').localeCompare(a.latestLike || '') ||
+    b.followerCount - a.followerCount;
+
+  const allClassified = Object.values(classified).sort(sortPeople);
+  const newList = allClassified.filter(p => p.category === 'new');
+  const returnList = allClassified.filter(p => p.category === 'return');
+  const regList = allClassified.filter(p => p.category === 'regular');
+  const occasionalList = allClassified.filter(p => p.category === 'occasional');
+
+  function personHTML(person) {
+    const profileUrl = person.urlname ? `https://note.com/${person.urlname}` : '#';
+    return `
+      <div class="weekly-person">
+        <img class="weekly-person-avatar" data-urlname="${person.urlname}" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='36' height='36'%3E%3Crect fill='%23333' width='36' height='36' rx='18'/%3E%3C/svg%3E" alt="">
+        <div class="weekly-person-name">
+          <a href="${profileUrl}" target="_blank" rel="noopener">${person.name}</a>
+          <div class="weekly-person-articles">${person.articles.map(a => `<div class="weekly-person-article-item">${a}</div>`).join('')}</div>
+        </div>
+        <div class="weekly-person-stats">
+          <div>${person.articles.length}記事</div>
+          <div>${person.followerCount.toLocaleString()} followers</div>
+        </div>
+      </div>`;
+  }
+
+  const emptyMsg = label => `<div style="color:var(--text-muted);font-size:13px;padding:8px 0">${label}</div>`;
+  const showNew = newList.slice(0, 15).map(p => personHTML(p)).join('') || emptyMsg('今週の新規スキなし');
+  const showReturn = returnList.slice(0, 15).map(p => personHTML(p)).join('') || emptyMsg('復帰ユーザーなし');
+  const showReg = regList.slice(0, 15).map(p => personHTML(p)).join('') || emptyMsg('常連スキなし');
+  const showOccasional = occasionalList.slice(0, 15).map(p => personHTML(p)).join('') || emptyMsg('該当なし');
+
+  const showAtRisk = atRiskUsers.slice(0, 10).map(p => {
+    const profileUrl = p.urlname ? `https://note.com/${p.urlname}` : '#';
+    return `
+      <div class="weekly-person">
+        <img class="weekly-person-avatar" data-urlname="${p.urlname}" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='36' height='36'%3E%3Crect fill='%23333' width='36' height='36' rx='18'/%3E%3C/svg%3E" alt="">
+        <div class="weekly-person-name">
+          <a href="${profileUrl}" target="_blank" rel="noopener">${p.name}</a>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:2px">最終スキ: ${p.lastSeen}</div>
+        </div>
+        <div class="weekly-person-stats">
+          <div>${p.followerCount.toLocaleString()} followers</div>
+        </div>
+      </div>`;
+  }).join('') || emptyMsg('離脱危機ユーザーなし');
+
+  const tabs = [
+    { id: 'new', label: `新規（${newList.length}）`, active: true },
+    { id: 'return', label: `復帰（${returnList.length}）`, active: false },
+    { id: 'regular', label: `常連（${regList.length}）`, active: false },
+    { id: 'occasional', label: `たまに（${occasionalList.length}）`, active: false },
+  ];
+  const tabsHTML = tabs.map(t => `<button class="weekly-people-tab${t.active ? ' active' : ''}" onclick="switchWeeklyPeopleTab(this,'${t.id}')">${t.label}</button>`).join('');
+
+  el.innerHTML = `
+    <div class="weekly-section">
+      <div class="weekly-section-title">今週のスキしてくれた人 <span style="font-size:12px;color:var(--text-muted);font-weight:400">${week.start}〜${week.end}</span></div>
+      <div class="weekly-people-tabs">${tabsHTML}</div>
+      <div class="weekly-people-content" data-tab="new">${showNew}</div>
+      <div class="weekly-people-content" data-tab="return" style="display:none">${showReturn}</div>
+      <div class="weekly-people-content" data-tab="regular" style="display:none">${showReg}</div>
+      <div class="weekly-people-content" data-tab="occasional" style="display:none">${showOccasional}</div>
+    </div>
+
+    <div class="weekly-section" style="margin-top:24px">
+      <div class="weekly-section-title" style="color:var(--accent-amber)">⚠ 離脱危機 <span style="font-size:12px;font-weight:400;color:var(--text-muted)">以前は頻繁だったが直近4週来ていない</span></div>
+      ${showAtRisk}
+    </div>`;
+
+  // Async load profile images
+  loadWeeklyAvatars();
+}
+
+// Profile image resolution — switch implementation here when CSV-based cache is ready
+const PROXY_URL = 'https://falling-mouse-736b.hasyamo.workers.dev/';
+const _profileImageCache = {};
+
+async function getProfileImageUrl(urlname) {
+  if (!urlname) return '';
+  if (_profileImageCache[urlname]) return _profileImageCache[urlname];
+
+  // TODO: switch to CSV lookup when fetch_likes.py saves profile image URLs
+  // const cached = likesProfileImages[urlname];
+  // if (cached) { _profileImageCache[urlname] = cached; return cached; }
+
+  try {
+    const res = await fetch(`${PROXY_URL}?id=${encodeURIComponent(urlname)}`);
+    if (res.ok) {
+      const data = await res.json();
+      const url = data.data?.profileImageUrl || '';
+      if (url) _profileImageCache[urlname] = url;
+      return url;
+    }
+  } catch (e) {}
+  return '';
+}
+
+async function loadWeeklyAvatars() {
+  const imgs = document.querySelectorAll('.weekly-person-avatar[data-urlname]');
+  for (const img of imgs) {
+    const urlname = img.dataset.urlname;
+    const url = await getProfileImageUrl(urlname);
+    if (url) img.src = url;
+  }
+}
+
+function switchWeeklyPeopleTab(btn, tab) {
+  btn.parentElement.querySelectorAll('.weekly-people-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const section = btn.closest('.weekly-section');
+  section.querySelectorAll('.weekly-people-content').forEach(el => {
+    el.style.display = el.dataset.tab === tab ? '' : 'none';
+  });
+}
+
+// --- 3. This week's articles ---
+function renderWeeklyArticles() {
+  const el = document.getElementById('weeklyCategoryBalance');
+  const week = getWeekRange();
+  if (!week.start) { el.innerHTML = ''; return; }
+
+  // Articles published this week
+  const weekArticles = latestSnapshot.filter(a => {
+    const pub = a.published_at ? a.published_at.slice(0, 10) : '';
+    return pub >= week.start && pub <= week.end;
+  }).sort((a, b) => (a.published_at || '').localeCompare(b.published_at || ''));
+
+  if (weekArticles.length === 0) {
+    el.innerHTML = '<div class="weekly-section"><div class="weekly-section-title">今週の記事</div><div style="color:var(--text-muted);font-size:13px">今週の公開記事なし</div></div>';
+    return;
+  }
+
+  // New/regular counts per article from likes
+  const articlePeopleCounts = {};
+  if (likesData.length > 0) {
+    const beforeWeek = new Set();
+    likesData.forEach(l => {
+      const ld = (l.liked_at || '').slice(0, 10);
+      if (ld < week.start) beforeWeek.add(l.like_user_id);
+    });
+    likesData.forEach(l => {
+      const ld = (l.liked_at || '').slice(0, 10);
+      if (ld >= week.start && ld <= week.end) {
+        const key = l.note_key;
+        if (!articlePeopleCounts[key]) articlePeopleCounts[key] = { newCount: 0, regCount: 0 };
+        if (beforeWeek.has(l.like_user_id)) articlePeopleCounts[key].regCount++;
+        else articlePeopleCounts[key].newCount++;
+      }
+    });
+  }
+
+  const rows = weekArticles.map(a => {
+    const catColor = getCategoryColor(a.category);
+    const catName = getCategoryName(a.category);
+    const pub = a.published_at ? getDayLabel(a.published_at.slice(0, 10)) : '';
+    const pc = articlePeopleCounts[a.key] || { newCount: 0, regCount: 0 };
+    return `
+      <div class="weekly-article-row">
+        <div class="weekly-article-title">
+          <span class="cat-badge" style="color:${catColor}">${a.category}</span> ${a.title}
+          <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${pub}</div>
+        </div>
+        <div class="weekly-article-stat">PV ${a.read_count}</div>
+        <div class="weekly-article-stat">スキ ${a.like_count}</div>
+        <div class="weekly-article-people">
+          <span style="color:var(--accent-green)">新${pc.newCount}</span> / <span style="color:var(--accent-cyan)">固${pc.regCount}</span>
+        </div>
+      </div>`;
+  }).join('');
+
+  el.innerHTML = `
+    <div class="weekly-section">
+      <div class="weekly-section-title">今週の記事（${weekArticles.length}本）</div>
+      ${rows}
+    </div>`;
+}
+
+// --- 4. Category Balance ---
+function renderWeeklyCategoryBalance() {
+  const el = document.getElementById('weeklyAction');
+  const week = getWeekRange();
+  if (!week.start) { el.innerHTML = ''; return; }
+
+  // This week's articles by category
+  const weekArticles = latestSnapshot.filter(a => {
+    const pub = a.published_at ? a.published_at.slice(0, 10) : '';
+    return pub >= week.start && pub <= week.end;
+  });
+
+  const catCounts = {};
+  const CAT_ORDER = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
+  weekArticles.forEach(a => { catCounts[a.category] = (catCounts[a.category] || 0) + 1; });
+  const abCount = (catCounts['A'] || 0) + (catCounts['B'] || 0);
+
+  // Category bar
+  const total = weekArticles.length || 1;
+  const barHTML = CAT_ORDER.filter(c => catCounts[c]).map(c =>
+    `<div class="weekly-cat-bar-seg" style="width:${(catCounts[c]/total*100).toFixed(1)}%;background:${getCategoryColor(c)}" title="${c}(${getCategoryName(c)}): ${catCounts[c]}本">${c}</div>`
+  ).join('');
+
+  // Category list
+  const listHTML = CAT_ORDER.filter(c => catCounts[c]).map(c =>
+    `<div class="weekly-cat-item"><div class="weekly-cat-dot" style="background:${getCategoryColor(c)}"></div>${c} ${getCategoryName(c)}: ${catCounts[c]}本</div>`
+  ).join('');
+
+  // Monthly ideal comparison (last 30 days)
+  const dataDate = week.dataDate;
+  const monthAgo = formatDate(new Date(parseDate(dataDate).getTime() - 29 * 86400000));
+  const monthArticles = latestSnapshot.filter(a => {
+    const pub = a.published_at ? a.published_at.slice(0, 10) : '';
+    return pub >= monthAgo && pub <= dataDate;
+  });
+  const monthCats = {};
+  monthArticles.forEach(a => { monthCats[a.category] = (monthCats[a.category] || 0) + 1; });
+
+  const MONTHLY_IDEAL = { A: [2,3], B: [5,8], C: [3,4], D: [4,4], E: [1,2], G: [0,1] };
+  const monthHTML = Object.entries(MONTHLY_IDEAL).map(([c, [lo, hi]]) => {
+    const actual = monthCats[c] || 0;
+    let judge = '✅';
+    if (actual < lo) judge = '⚠️ 少ない';
+    else if (actual > hi) judge = '📝 多め';
+    return `<div class="weekly-cat-item"><div class="weekly-cat-dot" style="background:${getCategoryColor(c)}"></div>${c} ${getCategoryName(c)}: ${actual}本 <span class="weekly-cat-ideal">(理想${lo}〜${hi}) ${judge}</span></div>`;
+  }).join('');
+
+  // A+B status
+  const abCls = abCount >= 2 ? 'ok' : 'warn';
+  const abMsg = abCount >= 2
+    ? `✅ A+B = ${abCount}本（一次情報ゾーン維持）`
+    : `⚠️ A+B = ${abCount}本（2本未満。来週はA or Bを増やす）`;
+
+  // Actions
+  const actions = [];
+  if (abCount < 2) actions.push('来週7本の中にA or Bを2本以上入れる');
+  Object.entries(MONTHLY_IDEAL).forEach(([c, [lo]]) => {
+    if ((monthCats[c] || 0) < lo) actions.push(`${c}(${getCategoryName(c)})が月間で不足気味 → 意識的に配置`);
+  });
+  if (actions.length === 0) actions.push('現状の書き方を継続');
+
+  const actionsHTML = actions.map(a => `<div class="weekly-action-item">${a}</div>`).join('');
+
+  el.innerHTML = `
+    <div class="weekly-section">
+      <div class="weekly-section-title">カテゴリバランス</div>
+      <div class="weekly-cat-bar">${barHTML}</div>
+      <div class="weekly-cat-list">${listHTML}</div>
+      <div class="weekly-ab-status ${abCls}">${abMsg}</div>
+    </div>
+
+    <div class="weekly-section" style="margin-top:24px">
+      <div class="weekly-section-title">月間カテゴリ比率（直近30日: ${monthArticles.length}本）</div>
+      <div class="weekly-cat-list">${monthHTML}</div>
+    </div>
+
+    <div class="weekly-section" style="margin-top:24px">
+      <div class="weekly-action-label">祈るな、設計しろ。</div>
+      <div class="weekly-action-list">${actionsHTML}</div>
+    </div>`;
+}
+
+// Placeholder - called by renderWeeklyTab but content is merged into renderWeeklyCategoryBalance
+function renderWeeklyAction() {}
 
 // ===== 1. Ranking =====
 let rankingTopN = 20;

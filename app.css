@@ -685,8 +685,8 @@ canvas.trend-row-spark {
 .tab-content.active { display: block; }
 
 /* Daily Tab */
-#tabDaily {
-  background: #1a1a24;
+#tabDaily, #tabActivity {
+  background: #0e0e16;
 }
 
 .daily-container {
@@ -784,25 +784,42 @@ canvas.trend-row-spark {
   margin-top: 10px;
 }
 
-.daily-memo-row {
+.daily-toolbar {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 12px;
+  margin-bottom: 8px;
 }
 
-.daily-memo-text {
-  flex: 1;
+.daily-toolbar-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.daily-toolbar-date {
   font-family: var(--font-mono);
-  font-size: 13px;
+  font-size: 14px;
+  font-weight: 600;
   color: var(--text-primary);
-  line-height: 1.5;
+  letter-spacing: 1px;
+  min-width: 100px;
+  text-align: center;
 }
 
-.daily-memo-nav {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  margin-top: 10px;
+.daily-memo-arrows {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: 1px;
+  margin-bottom: 6px;
+}
+
+.daily-memo-comment {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.6;
 }
 
 /* Follower inline */
@@ -941,6 +958,10 @@ canvas.trend-row-spark {
 }
 
 /* Weekly Tab */
+#tabWeekly {
+  background: #0e0e16;
+}
+
 .weekly-container {
   max-width: 900px;
   margin: 0 auto;
@@ -958,7 +979,7 @@ canvas.trend-row-spark {
 }
 
 .weekly-section {
-  background: var(--bg-card);
+  background: #242433;
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 24px;
@@ -971,6 +992,49 @@ canvas.trend-row-spark {
   color: var(--text-primary);
   letter-spacing: 1px;
   margin-bottom: 16px;
+}
+
+/* Weekly Navigator */
+.weekly-navi {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  margin-bottom: 12px;
+  margin-top: 24px;
+}
+
+.weekly-navi:first-child {
+  margin-top: 0;
+}
+
+.weekly-navi-img {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid var(--accent-cyan);
+  flex-shrink: 0;
+  box-shadow: 0 0 4px rgba(108,92,231,0.2);
+}
+
+.weekly-navi-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.weekly-navi-name {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--accent-cyan);
+  font-weight: 700;
+  letter-spacing: 1px;
+  margin-bottom: 2px;
+}
+
+.weekly-navi-line {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.6;
 }
 
 /* Follower chart */
@@ -999,20 +1063,37 @@ canvas.trend-row-spark {
 }
 
 .weekly-people-tab.active {
-  background: var(--bg-card);
+  background: #242433;
   color: var(--accent-cyan);
-  border-bottom-color: var(--bg-card);
+  border-bottom-color: #242433;
+}
+
+.weekly-person-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
 }
 
 .weekly-person {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 8px 0;
-  border-bottom: 1px solid var(--border-subtle);
+  padding: 12px 16px;
+  background: var(--bg-card);
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  margin-bottom: 8px;
+  transition: all 0.2s;
 }
 
-.weekly-person:last-child { border-bottom: none; }
+.weekly-person:hover {
+  transform: translateX(4px);
+  background: var(--bg-card-hover);
+}
+
+.weekly-person:last-child { margin-bottom: 0; }
 
 .weekly-person-name {
   flex: 1;
@@ -1021,29 +1102,40 @@ canvas.trend-row-spark {
 
 .weekly-person-name a {
   font-size: 13px;
-  color: var(--accent-cyan);
+  color: var(--text-primary);
   text-decoration: none;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .weekly-person-name a:hover {
   text-decoration: underline;
 }
 
-.weekly-person-article {
-  font-size: 11px;
-  color: var(--text-muted);
-  margin-top: 2px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.weekly-person-articles {
+  margin-top: 4px;
 }
 
-.weekly-person-followers {
+.weekly-person-article-item {
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.6;
+  padding-left: 10px;
+  position: relative;
+}
+
+.weekly-person-article-item::before {
+  content: '·';
+  position: absolute;
+  left: 0;
+  color: var(--text-muted);
+}
+
+.weekly-person-stats {
   font-family: var(--font-mono);
   font-size: 11px;
   color: var(--text-muted);
   white-space: nowrap;
+  text-align: right;
 }
 
 .weekly-person-badge {
@@ -1197,7 +1289,20 @@ canvas.trend-row-spark {
 
 @media (max-width: 900px) {
   .weekly-container { padding: 20px 16px; }
+  .weekly-section { padding: 16px; }
   .weekly-article-row { grid-template-columns: 1fr; gap: 4px; }
+  .weekly-people-tabs { flex-wrap: wrap; }
+  .weekly-people-tab { font-size: 11px; padding: 5px 10px; }
+  .weekly-person { padding: 10px 12px; }
+  .weekly-person-name a { font-size: 12px; }
+  .weekly-person-stats { font-size: 10px; }
+  .weekly-person-avatar { width: 32px; height: 32px; }
+  .weekly-navi-img { width: 36px; height: 36px; }
+  .weekly-navi-name { font-size: 11px; }
+  .weekly-navi-line { font-size: 12px; }
+  .weekly-cat-bar-seg { font-size: 10px; min-width: 22px; }
+  .weekly-person-articles { display: none; }
+  .weekly-person-article-item { display: none; }
 }
 
 @media (max-width: 900px) {
