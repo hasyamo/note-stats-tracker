@@ -103,6 +103,51 @@ const GIRL_LINES = {
     '次やること、のんびり選んでいいよ～。',
     'データから見えた「次の一手」、一緒に考えましょうね。',
   ],
+  deepEtaRanking: [
+    'スキ率ランキングよ。……直近の記事が入っているか、確認しなさい。',
+    'スキ率チェック！数字で見ると面白いよね～！',
+    'スキ率って...その記事がどれだけ心に届いたかってことだよね。',
+    'ふん、数字がすべてじゃないけど...スキ率は正直な指標よ。',
+    'スキ率ランキング～！どのカテゴリが強いかな？',
+    'のんびり分析するのも楽しいね～。',
+    'スキ率は読者の方の共感の深さ。大切にしたい数字ですね。',
+  ],
+  deepEtaTrend: [
+    '直近2週間のスキ率よ。……カテゴリ平均との差を確認しなさい。',
+    'いまの状態チェック！どんな感じかな～？',
+    '今がどういう時期なのか...ちゃんと見ておこうね。',
+    'いまの状況、把握しときなさいよ。...大事でしょ。',
+    '直近のステータスだよ！今どんな感じ？',
+    'のんびり今の状態を見てみよっか～。',
+    '直近の状態を、落ち着いて確認してみましょうね。',
+  ],
+  deepDecay: [
+    '減衰カーブよ。……記事の寿命を把握しておきなさい。',
+    '記事の消費期限だよ！どのくらいで止まるかな！',
+    '記事がどのくらいで静かになるか...見ておこうね。',
+    '……記事の寿命くらい、把握しときなさいよ。',
+    '記事の消費期限チェック！',
+    '記事の寿命かぁ～。のんびり見よっか。',
+    '記事の消費期限を、落ち着いて確認してみましょうね。',
+  ],
+  deepSparkline: [
+    '記事ごとの動き、整理しておいたわ。……確認しなさい。',
+    '記事別の推移だよ！どれが伸びてるかな！',
+    '一つ一つの記事の動き、ゆっくり見てみようね。',
+    '……自分の記事くらい、ちゃんと追いなさいよ。',
+    '記事の動き、チェックしよ！',
+    '記事の推移かぁ～。のんびり見よっか。',
+    '記事ごとの動きを、落ち着いて確認してみましょうね。',
+  ],
+  deepCommentRate: [
+    'コメントの割合、カテゴリごとに出しておいたわ。……確認しなさい。',
+    'コメント率チェック！どのカテゴリが反応もらえてるかな！',
+    'コメントの深さ、カテゴリごとに違うんだね。……ゆっくり見てみよう。',
+    '……コメント率くらい、自分で見なさいよ。',
+    'コメント率だよ！どのカテゴリが盛り上がってるかな！',
+    'コメントの割合かぁ～。のんびり見てみよっか。',
+    'コメントの深さ、カテゴリごとに違うんだね。……ゆっくり見てみよう。',
+  ],
   dailyArticle: [
     '今日の記事、初動を確認しておこう。',
     '今日の記事、出てるよ！どんな反応かな！',
@@ -319,45 +364,45 @@ const GIRL_DYNAMIC = {
   ],
 
   fans: [
-    // トップファンが30回以上
-    { cond: d => d.topFans.length > 0 && d.topFans[0].count >= 30, lines: [
-      d => `${d.topFans[0].name}さんが${d.topFans[0].count}回。もはやパートナーと言えるレベルの支持だね。`,
-      'うわーっ！こんなに来てくれる人がいるの！？感動！',
-      '何十回も...この人、本当にあなたの記事が好きなんだね。',
-      '...ここまで読んでくれるなんて。ちょっと見直したわ、その読者。',
-      'めちゃくちゃファンじゃん！すごすぎ！',
-      'すごいねぇ...こんなに何度も来てくれるんだ。',
-      '何度も何度も足を運んでくださる方がいるんですね。深い絆ですね。',
+    // 新規が3人以上ランクイン
+    { cond: d => d.rankNewCount >= 3, lines: [
+      d => `新しい人が${d.rankNewCount}人もランクインしてるよ！スキ活、効いてるね！`,
+      d => `${d.rankNewCount}人も新しい顔ぶれ！どんどん広がってるじゃん！`,
+      d => `${d.rankNewCount}人も新しく来てるんだ...スキ活の成果、出てるね。`,
+      d => `……${d.rankNewCount}人も新規がランクイン。スキ活、サボってないわね。`,
+      d => `新顔${d.rankNewCount}人！めっちゃ増えてるね！`,
+      d => `${d.rankNewCount}人も新しい人かぁ...にぎやかになってきたねぇ。`,
+      d => `${d.rankNewCount}人も新しい方がいらっしゃいますよ。輪が広がっていますね。`,
     ]},
-    // トップファンが20回以上
-    { cond: d => d.topFans.length > 0 && d.topFans[0].count >= 20, lines: [
-      d => `${d.topFans[0].name}さんが${d.topFans[0].count}回。リピート率から見て、確実にコアファンだね。`,
-      'こんなに何回も来てくれる人がいるの！？嬉しすぎ！',
-      '何度も読みに来てくれるって...あったかいね。',
-      '...そんなに読んでくれてるの。べつに感動してないけど。',
-      '常連さんだ！ありがとーって伝えたいね！',
-      '何度も来てくれるって、嬉しいねぇ。',
-      '何度も足を運んでくださる方がいるんですね。ありがたいです。',
+    // 復帰が2人以上ランクイン
+    { cond: d => d.rankReturnCount >= 2, lines: [
+      d => `戻ってきてくれた人が${d.rankReturnCount}人いるよ！離れてなかったんだね！`,
+      d => `${d.rankReturnCount}人も復帰してる！また来てくれたんだ！嬉しい！`,
+      d => `${d.rankReturnCount}人戻ってきてくれたんだ...忘れてなかったんだね。`,
+      d => `……${d.rankReturnCount}人が復帰。あんたの記事、まだ覚えてたのね。`,
+      d => `復帰${d.rankReturnCount}人！おかえり〜って感じだね！`,
+      d => `${d.rankReturnCount}人も戻ってきてくれたんだねぇ...あったかいねぇ。`,
+      d => `${d.rankReturnCount}人の方が戻ってきてくださいました。嬉しいですね。`,
     ]},
-    // トップファンが10回以上
-    { cond: d => d.topFans.length > 0 && d.topFans[0].count >= 10, lines: [
-      d => `${d.topFans[0].name}さんが${d.topFans[0].count}回。二桁を超えるリピートは信頼の証だよ。`,
-      '10回以上来てくれてる人がいるよ！常連さんだね！',
-      '10回以上...ちゃんと見てくれてるんだ。嬉しいな。',
-      '...10回以上？ふん、まあ見る目があるわね、その人。',
-      '10回超え！リピーターさんがいるの嬉しいよね！',
-      '10回以上かぁ...ありがたいねぇ。',
-      '10回以上読んでくださる方がいるんですね。大切な読者の方ですね。',
+    // 常連が半数以上（10人以上）
+    { cond: d => d.rankRegularCount >= 10, lines: [
+      d => `常連さんが${d.rankRegularCount}人。コミュニティ、しっかり維持できてるよ。`,
+      d => `${d.rankRegularCount}人も常連さん！みんないつも来てくれてるんだね！最高！`,
+      d => `常連さんが${d.rankRegularCount}人...いつもの人たちに支えられてるんだね。`,
+      d => `……${d.rankRegularCount}人が常連。固定ファンがいるのは強みよ。`,
+      d => `常連さん${d.rankRegularCount}人！安定感あるね！`,
+      d => `${d.rankRegularCount}人も常連さんかぁ...ありがたいねぇ。`,
+      d => `${d.rankRegularCount}人の常連の方がいらっしゃいますね。大切な支えですね。`,
     ]},
-    // ファンがいる
-    { cond: d => d.topFans.length > 0, lines: [
-      'リピーターがいること自体が価値。読者との接点を大切にしよう。',
-      'ちゃんとファンがいるよ！嬉しいよね！',
-      '応援してくれる人がいるんだね...ありがたいね。',
-      '...ファンがいるんだから、もっと自信持ちなさいよ。',
-      'ファンがいるよ！やったね！',
-      'ファンがいるって、いいねぇ。',
-      '読者の方がいらっしゃるって、素敵なことですね。',
+    // どれも該当しない
+    { cond: d => true, lines: [
+      '顔ぶれを見てみて。次のスキ活のヒントがあるかもしれないよ。',
+      'ランキングの顔ぶれ、チェックしてみよ！何か見えるかも！',
+      '誰が読んでくれてるか...ゆっくり見てみよう。',
+      '……ランキングをよく見なさい。次に何をすべきか、わかるはずよ。',
+      'ランキング見てみよ！次のアクションが見えてくるかも！',
+      'ランキングの顔ぶれかぁ...ゆっくり眺めてみよっか。',
+      'ランキングをじっくり見てみましょう。きっとヒントがありますよ。',
     ]},
   ],
 
@@ -971,6 +1016,100 @@ const GIRL_DYNAMIC = {
     // 全部OK
     { cond: d => true, lines: [
       null, null, null, null, null, '今週も月間もバランスいいねぇ～。この調子～。', null,
+    ]},
+  ],
+
+  // ===== Deep Dive: スキ率ランキング (月子=index 0) =====
+  deepEtaRanking: [
+    { cond: d => d.recentInTop1, lines: [
+      d => `直近の記事が1位、η${d.top1eta.toFixed(1)}%。……何が効いたか、記録しておきなさい。`, null, null, null, null, null, null,
+    ]},
+    { cond: d => d.recentInTop10 > 0, lines: [
+      d => `直近の記事がTOP10に${d.recentInTop10}本。悪くないわね。再現できるか確認しなさい。`, null, null, null, null, null, null,
+    ]},
+    { cond: d => d.recentInTop20 > 0, lines: [
+      d => `直近の記事がTOP20圏内。……もう少しよ。上位の記事と比較してみなさい。`, null, null, null, null, null, null,
+    ]},
+    { cond: d => d.recentArtCount > 0, lines: [
+      d => `直近の記事はTOP20に入ってないわね。1位のηは${d.top1eta.toFixed(1)}%。……比較してみなさい。`, null, null, null, null, null, null,
+    ]},
+    { cond: d => true, lines: [
+      'データがないわ。……記事を書きなさい。', null, null, null, null, null, null,
+    ]},
+  ],
+
+  // ===== Deep Dive: スキ率推移+通信簿 (月子=index 0) =====
+  deepEtaTrend: [
+    { cond: d => d.recentArtCount === 0, lines: [
+      '直近2週間に記事がないわ。……データがないと分析できないわよ。', null, null, null, null, null, null,
+    ]},
+    { cond: d => d.allAbove50, lines: [
+      '全カテゴリがカテゴリ平均以上。……悪くないわね。この調子を維持しなさい。', null, null, null, null, null, null,
+    ]},
+    { cond: d => d.onlyOneLow, lines: [
+      d => `${d.lowestCatName}のスコアが${d.lowestScore}点。……上位記事のタイトルと比較してみなさい。`, null, null, null, null, null, null,
+    ]},
+    { cond: d => d.halfBelow, lines: [
+      'カテゴリ平均を下回る記事が多いわ。……書き方かテーマ、見直しなさい。', null, null, null, null, null, null,
+    ]},
+    { cond: d => true, lines: [
+      '直近2週間のスキ率よ。……カテゴリ平均との差を確認しなさい。', null, null, null, null, null, null,
+    ]},
+  ],
+
+  // ===== Deep Dive: スパークライン (しずく=index 2) =====
+  deepSparkline: [
+    { cond: d => d.recentArtCount === 0, lines: [
+      null, null, '最近の記事はまだないね。……ゆっくりでいいから。', null, null, null, null,
+    ]},
+    { cond: d => d.recentPVAbove && d.recentLikeAbove, lines: [
+      null, null, '最近の記事、初動がいいね。PVもスキもカテゴリ平均超え。……ちゃんと届いてるよ。', null, null, null, null,
+    ]},
+    { cond: d => d.recentPVAbove && !d.recentLikeAbove, lines: [
+      null, null, 'PVは来てるけど、スキがもう少し……タイトルに引かれて来てるのかも。', null, null, null, null,
+    ]},
+    { cond: d => !d.recentPVAbove && d.recentLikeAbove, lines: [
+      null, null, '読んだ人には響いてるね。……もっと届くといいな。', null, null, null, null,
+    ]},
+    { cond: d => true, lines: [
+      null, null, '初動は静かだけど……焦らなくていいよ。じわじわ届くから。', null, null, null, null,
+    ]},
+  ],
+
+  // ===== Deep Dive: 減衰カーブ (凛華=index 3) =====
+  deepDecay: [
+    { cond: d => d.resurrectedCount >= 5, lines: [
+      null, null, null, d => `直近1ヶ月で死の谷を超えた記事が${d.resurrectedCount}本。……悪くないわね。延命施策、効いてるんじゃない。`, null, null, null,
+    ]},
+    { cond: d => d.resurrectedCount >= 1, lines: [
+      null, null, null, d => `死の谷を超えたのは${d.resurrectedCount}本だけ。……もっとリンクで流しなさい。`, null, null, null,
+    ]},
+    { cond: d => true, lines: [
+      null, null, null, '全部Day5で止まってるわ。……関連記事からリンクして、蘇生させなさい。', null, null, null,
+    ]},
+  ],
+
+  // ===== Deep Dive: コメ/スキ率 (日和=index 6) =====
+  deepCommentRate: [
+    // Eが最高
+    { cond: d => d.highestCommentCat === 'E', lines: [
+      null, null, null, null, null, null,
+      'キャラ系の記事に、一番コメントが集まってるね。……みんなの気持ち、ちゃんと届いてるよ。',
+    ]},
+    // AがBより高い
+    { cond: d => d.aHigherThanB, lines: [
+      null, null, null, null, null, null,
+      '設計思想の記事に深い反応が来てるね。……ちゃんと読んでくれてる人がいるよ。',
+    ]},
+    // 全体的にコメ率が低い
+    { cond: d => d.allCommentRatesLow, lines: [
+      null, null, null, null, null, null,
+      'コメントは少なめだけど……大丈夫。スキだけでも、気持ちは届いてるから。',
+    ]},
+    // フォールバック
+    { cond: d => true, lines: [
+      null, null, null, null, null, null,
+      'コメントの深さ、カテゴリごとに違うんだね。……ゆっくり見てみよう。',
     ]},
   ],
 

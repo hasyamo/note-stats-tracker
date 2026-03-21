@@ -1092,6 +1092,9 @@ canvas.trend-row-spark {
   object-fit: cover;
   flex-shrink: 0;
 }
+.weekly-person-avatar.avatar-regular {
+  box-shadow: 0 0 0 2px #1a1a2e, 0 0 0 4px #d4af37;
+}
 
 .weekly-person {
   display: flex;

@@ -748,7 +748,7 @@ function weeklyNavi(charIdx, section) {
   const charFile = CHIBI_FILES[charIdx];
   const charName = CHIBI_NAMES[charIdx];
   const line = getGirlLineForIdx(section, charIdx);
-  return `<div class="weekly-navi">
+  return `<div class="weekly-navi" id="navi-${section}">
     <img class="weekly-navi-img" src="images/eyes-thumb/eyes-${charFile}.webp" alt="${charName}">
     <div class="weekly-navi-body">
       <div class="weekly-navi-name">${charName}</div>
@@ -1049,37 +1049,49 @@ function drawWeeklyFollowerChart() {
   ctx.beginPath(); ctx.arc(lx, ly, 4, 0, Math.PI * 2); ctx.fillStyle = PINK; ctx.fill();
 }
 
+// --- User weekly history & classification ---
+function buildUserWeeks() {
+  const userWeeks = {};
+  likesData.forEach(l => {
+    const uid = l.like_user_id;
+    const d = (l.liked_at || '').slice(0, 10);
+    if (!d) return;
+    const likeWeek = getMondayOf(d);
+    if (!userWeeks[uid]) userWeeks[uid] = new Set();
+    userWeeks[uid].add(likeWeek);
+  });
+  return userWeeks;
+}
+
+function classifyUser(uid, periodStart, userWeeks) {
+  const weeks = userWeeks[uid] || new Set();
+  const prevWeeks = [];
+  let w = parseDate(getMondayOf(periodStart));
+  for (let i = 0; i < 4; i++) { w.setDate(w.getDate() - 7); prevWeeks.push(formatDate(w)); }
+  const periodWeekStart = getMondayOf(periodStart);
+  const hasBeforePeriod = [...weeks].some(w => w < periodWeekStart);
+  const recentActiveWeeks = prevWeeks.filter(pw => weeks.has(pw)).length;
+  if (!hasBeforePeriod) return 'new';
+  if (recentActiveWeeks >= 3) return 'regular';
+  if (recentActiveWeeks === 0) return 'return';
+  return 'occasional';
+}
+
 // --- People classification ---
 function computeWeeklyPeople(week) {
   if (likesData.length === 0) return { newList: [], returnList: [], regList: [], occasionalList: [], atRiskUsers: [] };
 
-  const userWeeks = {};
-  const thisWeekLikes = [];
-  likesData.forEach(l => {
-    const likedDate = (l.liked_at || '').slice(0, 10);
-    const uid = l.like_user_id;
-    const likeWeek = getMondayOf(likedDate);
-    if (!userWeeks[uid]) userWeeks[uid] = new Set();
-    userWeeks[uid].add(likeWeek);
-    if (likedDate >= week.start && likedDate <= week.end) thisWeekLikes.push(l);
+  const userWeeks = buildUserWeeks();
+  const thisWeekLikes = likesData.filter(l => {
+    const d = (l.liked_at || '').slice(0, 10);
+    return d >= week.start && d <= week.end;
   });
-
-  const prevWeeks = [];
-  let w = parseDate(week.start);
-  for (let i = 0; i < 4; i++) { w.setDate(w.getDate() - 7); prevWeeks.push(formatDate(w)); }
 
   const classified = {};
   thisWeekLikes.forEach(l => {
     const uid = l.like_user_id;
     if (!classified[uid]) {
-      const weeks = userWeeks[uid] || new Set();
-      const hasBeforeThisWeek = [...weeks].some(w => w < week.start);
-      const recentActiveWeeks = prevWeeks.filter(pw => weeks.has(pw)).length;
-      let category;
-      if (!hasBeforeThisWeek) category = 'new';
-      else if (recentActiveWeeks >= 3) category = 'regular';
-      else if (recentActiveWeeks === 0) category = 'return';
-      else category = 'occasional';
+      const category = classifyUser(uid, week.start, userWeeks);
       classified[uid] = { id: uid, name: l.like_username || l.like_user_urlname || uid, urlname: l.like_user_urlname || '', followerCount: parseInt(l.follower_count) || 0, articles: [], latestLike: '', category };
     }
     const noteKey = l.note_key;
@@ -1089,6 +1101,10 @@ function computeWeeklyPeople(week) {
     const likedDate = (l.liked_at || '').slice(0, 10);
     if (!classified[uid].latestLike || likedDate > classified[uid].latestLike) classified[uid].latestLike = likedDate;
   });
+
+  const prevWeeks = [];
+  let w1 = parseDate(week.start);
+  for (let i = 0; i < 4; i++) { w1.setDate(w1.getDate() - 7); prevWeeks.push(formatDate(w1)); }
 
   const olderWeeks = [];
   let w2 = parseDate(week.start);
@@ -1130,12 +1146,13 @@ function personCardHTML(person) {
   const profileUrl = person.urlname ? `https://note.com/${person.urlname}` : '#';
   const myLiked = getMyLikedUrlnames();
   const returned = person.urlname && myLiked.has(person.urlname);
+  const avatarClass = 'weekly-person-avatar' + (person.category === 'regular' ? ' avatar-regular' : '');
   const statusHTML = myLikesData.length > 0
     ? `<div style="font-size:11px;margin-top:2px">${returned ? '<span style="color:var(--accent-green)">✅ スキ返し済</span>' : '<span style="color:var(--accent-amber)">❌ 未スキ返し</span>'}</div>`
     : '';
   return `
     <div class="weekly-person">
-      <img class="weekly-person-avatar" data-urlname="${person.urlname}" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='36' height='36'%3E%3Crect fill='%23333' width='36' height='36' rx='18'/%3E%3C/svg%3E" alt="">
+      <img class="${avatarClass}" data-urlname="${person.urlname}" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='36' height='36'%3E%3Crect fill='%23333' width='36' height='36' rx='18'/%3E%3C/svg%3E" alt="">
       <div class="weekly-person-name">
         <a href="${profileUrl}" target="_blank" rel="noopener">${person.name}</a>
         <div class="weekly-person-articles">${person.articles.map(a => `<div class="weekly-person-article-item">${a}</div>`).join('')}</div>
@@ -1370,9 +1387,17 @@ ${buildEtaRankingForReport()}
 function buildEtaRankingForReport() {
   const catAvgs = getCategoryAvgs();
   const CAT_ORDER = ['B', 'D', 'C', 'A', 'E']; // η sequence order
+  // Last 30 days
+  const allDates = [...new Set(articlesData.map(a => a.date))].sort();
+  const rptLatest = allDates[allDates.length - 1] || '';
+  const rpt30ago = rptLatest ? formatDate(new Date(parseDate(rptLatest).getTime() - 29 * 86400000)) : '';
   return CAT_ORDER.map(c => {
     const arts = latestSnapshot
-      .filter(a => a.category === c && a.read_count > 0)
+      .filter(a => {
+        if (a.category !== c || a.read_count <= 0) return false;
+        const pub = a.published_at ? a.published_at.slice(0, 10) : '';
+        return pub >= rpt30ago && pub <= rptLatest;
+      })
       .map(a => ({ ...a, eta: a.like_count / a.read_count * 100 }))
       .sort((a, b) => b.eta - a.eta)
       .slice(0, 5);
@@ -1520,50 +1545,19 @@ function renderWeeklyPeople() {
   const week = getWeekRange();
   if (!week.start) { el.innerHTML = ''; return; }
 
-  // Build per-user weekly activity history
-  const userWeeks = {}; // uid → Set of week-start dates they liked in
-  const thisWeekLikes = [];
-
-  likesData.forEach(l => {
-    const likedDate = (l.liked_at || '').slice(0, 10);
-    const uid = l.like_user_id;
-    const likeWeek = getMondayOf(likedDate);
-    if (!userWeeks[uid]) userWeeks[uid] = new Set();
-    userWeeks[uid].add(likeWeek);
-    if (likedDate >= week.start && likedDate <= week.end) {
-      thisWeekLikes.push(l);
-    }
+  const userWeeks = buildUserWeeks();
+  const thisWeekLikes = likesData.filter(l => {
+    const d = (l.liked_at || '').slice(0, 10);
+    return d >= week.start && d <= week.end;
   });
 
-  // Recent 4 weeks (before this week)
-  const prevWeeks = [];
-  let w = parseDate(week.start);
-  for (let i = 0; i < 4; i++) {
-    w.setDate(w.getDate() - 7);
-    prevWeeks.push(formatDate(w));
-  }
-
   // Classify this week's likes
-  const classified = {}; // uid → { ...person, category }
+  const classified = {};
 
   thisWeekLikes.forEach(l => {
     const uid = l.like_user_id;
     if (!classified[uid]) {
-      const weeks = userWeeks[uid] || new Set();
-      const hasBeforeThisWeek = [...weeks].some(w => w < week.start);
-      const recentActiveWeeks = prevWeeks.filter(pw => weeks.has(pw)).length;
-
-      let category;
-      if (!hasBeforeThisWeek) {
-        category = 'new'; // 今週初めて
-      } else if (recentActiveWeeks >= 3) {
-        category = 'regular'; // 直近4週のうち3週以上
-      } else if (recentActiveWeeks === 0) {
-        category = 'return'; // 直近4週スキなし→今週復帰
-      } else {
-        category = 'occasional'; // たまに
-      }
-
+      const category = classifyUser(uid, week.start, userWeeks);
       classified[uid] = {
         id: uid,
         name: l.like_username || l.like_user_urlname || uid,
@@ -1586,7 +1580,11 @@ function renderWeeklyPeople() {
     }
   });
 
-  // Detect 離脱危機: users who were active in 3+ of prev weeks 5-8, but 0 in prev weeks 1-4 and not this week
+  // Detect 離脱危機: prev weeks 1-4 inactive, prev weeks 5-8 active 2+
+  const prevWeeks = [];
+  let w = parseDate(week.start);
+  for (let i = 0; i < 4; i++) { w.setDate(w.getDate() - 7); prevWeeks.push(formatDate(w)); }
+
   const olderWeeks = [];
   let w2 = parseDate(week.start);
   for (let i = 0; i < 8; i++) {
@@ -1596,11 +1594,10 @@ function renderWeeklyPeople() {
 
   const atRiskUsers = [];
   Object.entries(userWeeks).forEach(([uid, weeks]) => {
-    if (classified[uid]) return; // Already liked this week
+    if (classified[uid]) return;
     const recentActive = prevWeeks.filter(pw => weeks.has(pw)).length;
     const olderActive = olderWeeks.filter(ow => weeks.has(ow)).length;
     if (recentActive === 0 && olderActive >= 2) {
-      // Find user info from last like
       const lastLike = likesData.filter(l => l.like_user_id === uid).pop();
       if (lastLike) {
         atRiskUsers.push({
@@ -1628,9 +1625,10 @@ function renderWeeklyPeople() {
 
   function personHTML(person) {
     const profileUrl = person.urlname ? `https://note.com/${person.urlname}` : '#';
+    const avatarClass = 'weekly-person-avatar' + (person.category === 'regular' ? ' avatar-regular' : '');
     return `
       <div class="weekly-person">
-        <img class="weekly-person-avatar" data-urlname="${person.urlname}" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='36' height='36'%3E%3Crect fill='%23333' width='36' height='36' rx='18'/%3E%3C/svg%3E" alt="">
+        <img class="${avatarClass}" data-urlname="${person.urlname}" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='36' height='36'%3E%3Crect fill='%23333' width='36' height='36' rx='18'/%3E%3C/svg%3E" alt="">
         <div class="weekly-person-name">
           <a href="${profileUrl}" target="_blank" rel="noopener">${person.name}</a>
           <div class="weekly-person-articles">${person.articles.map(a => `<div class="weekly-person-article-item">${a}</div>`).join('')}</div>
@@ -1946,7 +1944,15 @@ let rankingCatFilter = 'all';
 
 function renderRanking() {
   const container = document.getElementById('rankingChart');
-  const filtered = rankingCatFilter === 'all' ? latestSnapshot : latestSnapshot.filter(a => a.category === rankingCatFilter);
+  // Filter to last 30 days
+  const allDates = [...new Set(articlesData.map(a => a.date))].sort();
+  const rankLatestDate = allDates[allDates.length - 1] || '';
+  const rank30ago = rankLatestDate ? formatDate(new Date(parseDate(rankLatestDate).getTime() - 29 * 86400000)) : '';
+  const recent30 = latestSnapshot.filter(a => {
+    const pub = a.published_at ? a.published_at.slice(0, 10) : '';
+    return pub >= rank30ago && pub <= rankLatestDate;
+  });
+  const filtered = rankingCatFilter === 'all' ? recent30 : recent30.filter(a => a.category === rankingCatFilter);
   const sorted = [...filtered]
     .map(a => ({ ...a, eta: a.read_count > 0 ? (a.like_count / a.read_count * 100) : 0 }))
     .sort((a, b) => b.eta - a.eta);
@@ -2972,11 +2978,144 @@ function renderDecayChart() {
 function renderDeepDive() {
   const el = document.getElementById('deepDiveContent');
 
+  // Compute comment/like ratio by category for girl-lines
+  const commentRateBycat = {};
+  let highestCommentCat = '';
+  let highestCommentRate = 0;
+  ['A','B','C','D','E'].forEach(c => {
+    const arts = latestSnapshot.filter(a => a.category === c);
+    if (arts.length === 0) return;
+    const likes = arts.reduce((s, a) => s + a.like_count, 0);
+    const comments = arts.reduce((s, a) => s + a.comment_count, 0);
+    const ratio = likes > 0 ? (comments / 2) / likes * 100 : 0;
+    commentRateBycat[c] = ratio;
+    if (ratio > highestCommentRate) { highestCommentRate = ratio; highestCommentCat = c; }
+  });
+  const allCommentRatesLow = Object.values(commentRateBycat).every(r => r < 15);
+  const aHigherThanB = (commentRateBycat['A'] || 0) > (commentRateBycat['B'] || 0);
+
+  // Compute η trend report card scores for girl-lines
+  const dates = [...new Set(articlesData.map(a => a.date))].sort();
+  const ddLatestDate = dates[dates.length - 1] || '';
+  const twoWeeksAgo = ddLatestDate ? formatDate(new Date(parseDate(ddLatestDate).getTime() - 13 * 86400000)) : '';
+  const thirtyDaysAgo = ddLatestDate ? formatDate(new Date(parseDate(ddLatestDate).getTime() - 29 * 86400000)) : '';
+
+  // 30-day category η averages
+  const ddCatEtas = {};
+  ['A','B','C','D','E'].forEach(c => {
+    const arts = latestSnapshot.filter(a => {
+      if (a.category !== c) return false;
+      const pub = a.published_at ? a.published_at.slice(0, 10) : '';
+      return pub >= thirtyDaysAgo && pub <= ddLatestDate;
+    });
+    if (arts.length === 0) return;
+    const totalPV = arts.reduce((s, a) => s + a.read_count, 0);
+    const totalLike = arts.reduce((s, a) => s + a.like_count, 0);
+    ddCatEtas[c] = totalPV > 0 ? totalLike / totalPV * 100 : 0;
+  });
+
+  // Recent 2 weeks articles with η
+  const recentArts = latestSnapshot
+    .filter(a => a.published_at && a.published_at.slice(0, 10) >= twoWeeksAgo && a.published_at.slice(0, 10) <= ddLatestDate && a.read_count > 0)
+    .map(a => ({ ...a, eta: a.like_count / a.read_count * 100 }));
+
+  // Scores per category
+  const ddScores = {};
+  let allAbove50 = true;
+  let belowCount = 0;
+  let lowestCat = '';
+  let lowestScore = 100;
+  ['A','B','C','D','E'].forEach(c => {
+    const arts = recentArts.filter(a => a.category === c);
+    if (arts.length === 0 || !ddCatEtas[c]) return;
+    const avgDiff = arts.reduce((s, a) => s + (a.eta - ddCatEtas[c]), 0) / arts.length;
+    const score = Math.max(0, Math.min(100, Math.round(50 + avgDiff * 10)));
+    ddScores[c] = score;
+    if (score < 50) { allAbove50 = false; belowCount++; }
+    if (score < lowestScore) { lowestScore = score; lowestCat = c; }
+  });
+  const scoredCount = Object.keys(ddScores).length;
+  const halfBelow = belowCount >= scoredCount / 2;
+  const onlyOneLow = belowCount === 1 && lowestScore < 30;
+
+  // TOP ranking check (last 30 days)
+  const recent30forRank = latestSnapshot.filter(a => {
+    const pub = a.published_at ? a.published_at.slice(0, 10) : '';
+    return pub >= thirtyDaysAgo && pub <= ddLatestDate;
+  });
+  const allSorted = [...recent30forRank]
+    .filter(a => a.read_count > 0)
+    .map(a => ({ ...a, eta: a.like_count / a.read_count * 100 }))
+    .sort((a, b) => b.eta - a.eta);
+  const top1key = allSorted.length > 0 ? allSorted[0].key : '';
+  const top10keys = new Set(allSorted.slice(0, 10).map(a => a.key));
+  const top20keys = new Set(allSorted.slice(0, 20).map(a => a.key));
+  const recentInTop1 = recentArts.some(a => a.key === top1key);
+  const recentInTop10 = recentArts.filter(a => top10keys.has(a.key)).length;
+  const recentInTop20 = recentArts.filter(a => top20keys.has(a.key)).length;
+  const top1eta = allSorted.length > 0 ? allSorted[0].eta : 0;
+
+  const savedData = _dailyRenderData;
+  _dailyRenderData = {
+    highestCommentCat, highestCommentRate, allCommentRatesLow, aHigherThanB,
+    allAbove50, halfBelow, onlyOneLow, lowestCat, lowestScore,
+    recentInTop1, recentInTop10, recentInTop20, top1eta,
+    recentArtCount: recentArts.length,
+    lowestCatName: lowestCat ? getCategoryName(lowestCat) : '',
+    recentPVAbove: false,
+    recentLikeAbove: false,
+    resurrectedCount: 0,
+    rankNewCount: 0,
+    rankReturnCount: 0,
+    rankRegularCount: 0,
+  };
+
+  // Sparkline: recent article initial performance vs category average
+  if (recentArts.length > 0) {
+    const ddCatAvgs = getCategoryAvgs();
+    let pvAboveCount = 0, likeAboveCount = 0;
+    recentArts.forEach(a => {
+      const ca = ddCatAvgs[a.category] || { avgPV: 0, avgLike: 0 };
+      if (a.read_count >= ca.avgPV) pvAboveCount++;
+      if (a.like_count >= ca.avgLike) likeAboveCount++;
+    });
+    _dailyRenderData.recentPVAbove = pvAboveCount >= recentArts.length / 2;
+    _dailyRenderData.recentLikeAbove = likeAboveCount >= recentArts.length / 2;
+  }
+
+  // Resurrected: articles with PV increase on Day6+ within last 30 days
+  if (dates.length >= 2) {
+    const sixDaysAgo = formatDate(new Date(parseDate(ddLatestDate).getTime() - 6 * 86400000));
+    const monthAgoDate = formatDate(new Date(parseDate(ddLatestDate).getTime() - 29 * 86400000));
+    const resurrected = new Set();
+    for (let di = 1; di < dates.length; di++) {
+      const d = dates[di];
+      if (d < monthAgoDate) continue;
+      const prevD = dates[di - 1];
+      const currArts = {};
+      articlesData.filter(a => a.date === d).forEach(a => { currArts[a.key] = a; });
+      const prevArts = {};
+      articlesData.filter(a => a.date === prevD).forEach(a => { prevArts[a.key] = a; });
+      Object.entries(currArts).forEach(([key, a]) => {
+        const pub = a.published_at ? a.published_at.slice(0, 10) : '';
+        if (!pub) return;
+        const ageDays = Math.round((parseDate(d) - parseDate(pub)) / 86400000);
+        if (ageDays < 6) return;
+        const prevPV = prevArts[key] ? prevArts[key].read_count : 0;
+        if (a.read_count - prevPV >= 5) resurrected.add(key);
+      });
+    }
+    _dailyRenderData.resurrectedCount = resurrected.size;
+  }
+
+  // Fans: all-article suki & new rankers (before HTML generation so navi line is correct)
+  updateFansRenderData();
+
   let html = '';
 
   // 1. スキ率ランキング (月子=0)
   html += `<div>`;
-  html += weeklyNavi(0, 'eta');
+  html += weeklyNavi(0, 'deepEtaRanking');
   html += `<div class="weekly-section">
     <div class="weekly-section-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap">
       <span>スキ率ランキング</span>
@@ -3002,7 +3141,7 @@ function renderDeepDive() {
 
   // 2. カテゴリ別コメ/スキ率 (日和=6)
   html += `<div>`;
-  html += weeklyNavi(6, 'category');
+  html += weeklyNavi(6, 'deepCommentRate');
   html += `<div class="weekly-section">
     <div class="weekly-section-title">カテゴリ別 コメント/スキ率</div>
     <div class="dd-canvas-wrap"><canvas id="commentLikeRatioCanvas"></canvas></div>
@@ -3010,7 +3149,7 @@ function renderDeepDive() {
 
   // 3. 直近2週間スキ率推移 (月子=0) — full width
   html += `<div class="dd-full">`;
-  html += weeklyNavi(0, 'trend');
+  html += weeklyNavi(0, 'deepEtaTrend');
   html += `<div class="weekly-section">
     <div class="weekly-section-title">直近2週間 スキ率推移 <span class="panel-badge" id="etaTrendBadge">--</span></div>
     <div class="dd-canvas-wrap"><canvas id="etaTrendCanvas"></canvas></div>
@@ -3020,7 +3159,7 @@ function renderDeepDive() {
 
   // 4. 記事別日次推移 (しずく=2) — full width
   html += `<div class="dd-full">`;
-  html += weeklyNavi(2, 'journey');
+  html += weeklyNavi(2, 'deepSparkline');
   html += `<div class="weekly-section">
     <div class="weekly-section-title">記事別 日次推移 <span class="panel-badge" id="trendBadge">--</span></div>
     <div class="trend-tabs">
@@ -3051,9 +3190,16 @@ function renderDeepDive() {
     <div class="trend-rows" id="trendRows"><div class="no-data">読み込み中...</div></div>
   </div></div>`;
 
-  // 4. 減衰カーブ (凛華=3) — full width
+  // 4b. ロングテール記事 (しずく=2) — full width
   html += `<div class="dd-full">`;
-  html += weeklyNavi(3, 'action');
+  html += `<div class="weekly-section">
+    <div class="weekly-section-title">ロングテール記事（Day6超でPV増あり）</div>
+    <div id="longTailList"></div>
+  </div></div>`;
+
+  // 5. 減衰カーブ (凛華=3) — full width
+  html += `<div class="dd-full">`;
+  html += weeklyNavi(3, 'deepDecay');
   html += `<div class="weekly-section">
     <div class="weekly-section-title">記事の消費期限：公開からのPV減衰 <span class="panel-badge" id="decayBadge">--</span></div>
     <div class="dd-canvas-wrap"><canvas id="decayCanvas"></canvas></div>
@@ -3120,6 +3266,8 @@ function renderDeepDive() {
     if (el) el.addEventListener('change', () => { renderTrendRows(); });
   });
 
+  _dailyRenderData = savedData;
+
   // Render all charts (delay to ensure layout is complete)
   setTimeout(() => {
     renderRanking();
@@ -3128,6 +3276,7 @@ function renderDeepDive() {
     renderDecayChart();
     renderSukiRanking();
     renderCommentByChar();
+    renderLongTailList();
   }, 200);
 }
 
@@ -3165,9 +3314,57 @@ function getSukiPeriodRange(period) {
   return { start: '', end: dataDate };
 }
 
+function updateFansRenderData() {
+  _dailyRenderData.rankNewCount = 0;
+  _dailyRenderData.rankReturnCount = 0;
+  _dailyRenderData.rankRegularCount = 0;
+  _dailyRenderData.rankUserCategory = {};
+  if (likesData.length === 0) return;
+
+  const range = getSukiPeriodRange(sukiPeriod);
+  const periodLikes = likesData.filter(l => {
+    const d = (l.liked_at || '').slice(0, 10);
+    return d >= range.start && d <= range.end;
+  });
+
+  // Build per-user suki count in this period for ranking
+  const userCounts = {};
+  periodLikes.forEach(l => {
+    const uid = l.like_user_id;
+    if (!userCounts[uid]) {
+      userCounts[uid] = { uid, count: 0 };
+    }
+    userCounts[uid].count++;
+  });
+  const top20 = Object.values(userCounts).sort((a, b) => b.count - a.count).slice(0, 20);
+
+  // Classify each top20 user using shared functions
+  const userWeeks = buildUserWeeks();
+  let newCount = 0, returnCount = 0, regularCount = 0;
+  top20.forEach(u => {
+    const cat = classifyUser(u.uid, range.start, userWeeks);
+    _dailyRenderData.rankUserCategory[u.uid] = cat;
+    if (cat === 'new') newCount++;
+    else if (cat === 'regular') regularCount++;
+    else if (cat === 'return') returnCount++;
+  });
+
+  _dailyRenderData.rankNewCount = newCount;
+  _dailyRenderData.rankReturnCount = returnCount;
+  _dailyRenderData.rankRegularCount = regularCount;
+
+  // Update navi line
+  const naviLine = document.querySelector('#navi-fans .weekly-navi-line');
+  if (naviLine) {
+    naviLine.textContent = getGirlLineForIdx('fans', 4);
+  }
+}
+
 function renderSukiRanking() {
   const el = document.getElementById('sukiRankingContent');
   if (likesData.length === 0) { el.innerHTML = '<div class="no-data">likes.csv データなし</div>'; return; }
+
+  updateFansRenderData();
 
   const range = getSukiPeriodRange(sukiPeriod);
   const periodLikes = likesData.filter(l => {
@@ -3188,6 +3385,7 @@ function renderSukiRanking() {
     const uid = l.like_user_id;
     if (!userMap[uid]) {
       userMap[uid] = {
+        uid,
         name: l.like_username || l.like_user_urlname || uid,
         urlname: l.like_user_urlname || '',
         count: 0,
@@ -3207,9 +3405,11 @@ function renderSukiRanking() {
 
   function sukiCard(u, i) {
     const profileUrl = u.urlname ? `https://note.com/${u.urlname}` : '#';
+    const cat = (_dailyRenderData.rankUserCategory || {})[u.uid] || '';
+    const avatarClass = 'weekly-person-avatar' + (cat === 'regular' ? ' avatar-regular' : '');
     return `<div class="weekly-person">
       <div style="font-family:var(--font-mono);font-size:18px;font-weight:700;color:var(--accent-pink);min-width:28px;text-align:center">${i + 1}</div>
-      <img class="weekly-person-avatar" data-urlname="${u.urlname}" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='36' height='36'%3E%3Crect fill='%23333' width='36' height='36' rx='18'/%3E%3C/svg%3E" alt="">
+      <img class="${avatarClass}" data-urlname="${u.urlname}" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='36' height='36'%3E%3Crect fill='%23333' width='36' height='36' rx='18'/%3E%3C/svg%3E" alt="">
       <div class="weekly-person-name">
         <a href="${profileUrl}" target="_blank" rel="noopener">${u.name}</a>
       </div>
@@ -3380,6 +3580,49 @@ function renderCommentByChar() {
     ctx.font = '9px JetBrains Mono';
     ctx.fillText(d.articles + '本', x + barW / 2, H - pad.b + 42);
   });
+}
+
+// ===== Long Tail List =====
+function renderLongTailList() {
+  const listEl = document.getElementById('longTailList');
+  if (!listEl || articlesData.length === 0) return;
+
+  const dates = [...new Set(articlesData.map(a => a.date))].sort();
+  const latestDate = dates[dates.length - 1];
+
+  if (dates.length < 2) return;
+
+  const prevDate = dates[dates.length - 2];
+  const prevSnap = {};
+  articlesData.filter(a => a.date === prevDate).forEach(a => { prevSnap[a.key] = a.read_count; });
+  const sixDaysAgo = formatDate(new Date(parseDate(latestDate).getTime() - 6 * 86400000));
+
+  const ltArticles = [];
+  latestSnapshot.forEach(a => {
+    const pub = a.published_at ? a.published_at.slice(0, 10) : '';
+    if (!pub || pub > sixDaysAgo) return;
+    const prevPV = prevSnap[a.key] || 0;
+    const diff = a.read_count - prevPV;
+    if (diff > 0) {
+      const ageDays = Math.round((parseDate(latestDate) - parseDate(pub)) / 86400000);
+      ltArticles.push({ title: a.title, key: a.key, pub, diff, pv: a.read_count, ageDays, category: a.category });
+    }
+  });
+  ltArticles.sort((a, b) => b.diff - a.diff);
+
+  if (ltArticles.length > 0) {
+    listEl.innerHTML = ltArticles.map(a => {
+      const catColor = getCategoryColor(a.category);
+      return `<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--border-subtle);font-size:12px">
+        <span style="color:var(--accent-green);font-family:var(--font-mono);font-weight:600;min-width:40px">+${a.diff}/日</span>
+        <span class="cat-badge" style="color:${catColor}">${a.category}</span>
+        <a href="${noteURL(a.key)}" target="_blank" rel="noopener" style="color:var(--text-primary);text-decoration:none;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${a.title}</a>
+        <span style="color:var(--text-muted);font-family:var(--font-mono);font-size:11px;white-space:nowrap">Day${a.ageDays}</span>
+      </div>`;
+    }).join('');
+  } else {
+    listEl.innerHTML = '<div style="color:var(--text-muted);font-size:13px">Day6超でPV増のある記事なし</div>';
+  }
 }
 
 // ===== Tooltip =====
