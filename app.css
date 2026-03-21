@@ -1255,6 +1255,9 @@ canvas.trend-row-spark {
   grid-template-columns: 1fr 1fr;
   gap: 0 24px;
 }
+#deepDiveContent > div:not(.dd-full) .weekly-navi {
+  min-height: 72px;
+}
 
 #deepDiveContent .dd-full {
   grid-column: 1 / -1;
@@ -1391,6 +1394,16 @@ canvas.trend-row-spark {
   .weekly-container { padding: 20px 16px; }
   .weekly-section { padding: 16px; }
   #deepDiveContent { grid-template-columns: 1fr; }
+  #tabDeepdive .weekly-container { max-width: 100%; overflow-x: hidden; box-sizing: border-box; width: 100%; }
+  #tabDeepdive .weekly-section { overflow: hidden; box-sizing: border-box; max-width: 100%; }
+  #tabDeepdive .dd-full { overflow: hidden; max-width: 100%; }
+  .dd-canvas-wrap { overflow-x: auto; }
+  .toggle-group { flex-wrap: wrap; }
+  .toggle-btn { padding: 3px 8px; font-size: 11px; }
+  .trend-filters { gap: 8px; font-size: 11px; }
+  .trend-tab { padding: 5px 12px; font-size: 11px; }
+  body { zoom: 1; }
+  .weekly-section-title { font-size: 13px; flex-wrap: wrap; gap: 4px; }
   .weekly-cat-pie-layout { flex-direction: column; align-items: stretch; }
   .weekly-cat-pie-layout canvas { align-self: center; }
   .weekly-article-row { grid-template-columns: 1fr; }
