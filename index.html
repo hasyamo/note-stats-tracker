@@ -6,7 +6,7 @@
 <title>祈るな、設計しろ。</title>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
 <link rel="icon" id="favicon" type="image/png" href="images/favicon/eyes-mon.png">
-<link rel="stylesheet" href="app.css?v=1.0.0">
+<link rel="stylesheet" href="app.css?v=1.1.0">
 </head>
 <body>
 
@@ -117,123 +117,23 @@
 
   <!-- Deep Dive Tab -->
   <div class="tab-content" id="tabDeepdive">
-
-  <!-- Charts Grid -->
-  <div class="grid">
-    <!-- 1. Like Rate Ranking -->
-    <div class="panel">
-      <div class="panel-header">
-        <div class="panel-title">スキ率ランキング</div>
-        <div class="toggle-group" id="rankingToggle">
-          <div class="toggle-btn" data-top="5">TOP 5</div>
-          <div class="toggle-btn" data-top="10">TOP 10</div>
-          <div class="toggle-btn active" data-top="20">TOP 20</div>
-        </div>
-      </div>
-      <div class="chart-container">
-        <div class="bar-chart" id="rankingChart">
-          <div class="no-data">CSVデータを読み込んでください</div>
-        </div>
-      </div>
-      <div class="decay-legend" id="rankingLegend"></div>
+    <div class="weekly-container">
+      <div class="weekly-header-text">設計した。次は、検証だ。</div>
+      <div id="deepDiveContent"></div>
     </div>
-
-    <!-- 2. PV vs Likes Scatter -->
-    <div class="panel" style="min-height:auto; max-height:600px;">
-      <div class="panel-header">
-        <div class="panel-title">PV × スキ 散布図</div>
-        <div class="toggle-group" id="scatterToggle">
-          <div class="toggle-btn active" data-mode="eta">η色分け</div>
-          <div class="toggle-btn" data-mode="category">カテゴリ色分け</div>
-        </div>
-      </div>
-      <div class="chart-container">
-        <canvas id="scatterCanvas"></canvas>
-      </div>
-      <div class="decay-legend" id="scatterLegend"></div>
-    </div>
-
-    <!-- 3. Category η Comparison (full width) -->
-    <div class="panel panel-full" style="min-height:auto; max-height:600px;">
-      <div class="panel-header">
-        <div class="panel-title">カテゴリ別 スキ率比較</div>
-        <div class="panel-badge" id="catBadge">--</div>
-      </div>
-      <div class="chart-container" style="min-height:280px; max-height:420px;">
-        <canvas id="categoryCanvas"></canvas>
-      </div>
-      <div class="decay-legend" id="categoryLegend"></div>
-    </div>
-
-    <!-- 4. Recent Articles η Trend (full width) -->
-    <div class="panel panel-full" style="min-height:auto; max-height:600px;">
-      <div class="panel-header">
-        <div class="panel-title">直近2週間 スキ率推移</div>
-        <div class="panel-badge" id="etaTrendBadge">--</div>
-      </div>
-      <div class="chart-container" style="max-height:420px;">
-        <canvas id="etaTrendCanvas"></canvas>
-      </div>
-      <div class="decay-legend" id="etaTrendLegend"></div>
-    </div>
-
-    <!-- 4. Article Trend (sparkline rows with tabs) -->
-    <div class="panel panel-full trend-panel">
-      <div class="panel-header">
-        <div class="panel-title">記事別 日次推移</div>
-        <div class="panel-badge" id="trendBadge">--</div>
-      </div>
-      <div class="trend-tabs">
-        <div class="trend-tab active" data-metric="pv_delta">PV</div>
-        <div class="trend-tab" data-metric="like_delta">スキ</div>
-      </div>
-      <div class="trend-filters">
-        <label>投稿日: 直近
-          <select id="trendDayFilter">
-            <option value="7">7日</option>
-            <option value="14" selected>14日</option>
-            <option value="30">30日</option>
-            <option value="0">すべて</option>
-          </select>
-        </label>
-        <label>増分 ≥
-          <input id="trendMinDelta" type="number" value="0" min="0" style="width:60px">
-        </label>
-        <label>カテゴリ:
-          <select id="trendCatFilter">
-            <option value="">すべて</option>
-            <option value="A">A 設計思想</option>
-            <option value="B">B 試行錯誤</option>
-            <option value="C">C ハウツー</option>
-            <option value="D">D 振り返り</option>
-            <option value="E">E キャラ系</option>
-            <option value="AB">A+B 一次情報</option>
-          </select>
-        </label>
-      </div>
-      <div class="trend-rows" id="trendRows">
-        <div class="no-data">データを読み込み中...</div>
-      </div>
-    </div>
-
-    <!-- 5. Decay Curve -->
-    <div class="panel panel-full" style="min-height:auto; max-height:500px;">
-      <div class="panel-header">
-        <div class="panel-title">記事の消費期限：公開からのPV減衰</div>
-        <div class="panel-badge" id="decayBadge">-- articles</div>
-      </div>
-      <div class="chart-container" style="min-height:auto; max-height:420px;">
-        <canvas id="decayCanvas"></canvas>
-      </div>
-      <div class="decay-legend" id="decayLegend"></div>
-    </div>
-  </div>
-
   </div><!-- /tabDeepdive -->
 
   <footer class="footer">
     意志じゃなく、設計で。
   </footer>
+</div>
+
+<!-- Suki Screenshot Modal -->
+<div id="sukiScreenshotModal" style="display:none;position:fixed;inset:0;z-index:100;background:rgba(0,0,0,0.7);overflow:auto" onclick="if(event.target===this)closeSukiScreenshot()">
+  <div style="max-width:760px;margin:40px auto;position:relative">
+    <button onclick="closeSukiScreenshot()" style="position:absolute;top:8px;right:12px;background:none;border:none;font-size:24px;color:#666;cursor:pointer">&times;</button>
+    <div id="sukiScreenshotContent"></div>
+  </div>
 </div>
 
 <!-- Tooltip -->
@@ -242,7 +142,7 @@
   <div class="tooltip-row" id="tooltipBody"></div>
 </div>
 
-<script src="girl-lines.js?v=1.0.0"></script>
-<script src="app.js?v=1.0.0"></script>
+<script src="girl-lines.js?v=1.1.0"></script>
+<script src="app.js?v=1.1.0"></script>
 </body>
 </html>

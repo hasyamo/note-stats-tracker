@@ -1218,6 +1218,46 @@ canvas.trend-row-spark {
   white-space: nowrap;
 }
 
+/* Deep Dive grid */
+#tabDeepdive .weekly-container {
+  max-width: none;
+}
+
+#deepDiveContent {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 24px;
+}
+
+#deepDiveContent .dd-full {
+  grid-column: 1 / -1;
+}
+
+.suki-ranking-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 16px;
+}
+
+@media (max-width: 900px) {
+  .suki-ranking-grid { grid-template-columns: 1fr; }
+}
+
+.dd-canvas-wrap {
+  position: relative;
+  width: 100%;
+  height: 400px;
+  overflow: hidden;
+}
+
+.dd-canvas-wrap canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100% !important;
+  height: 100% !important;
+}
+
 /* Category balance */
 .weekly-cat-pie-layout {
   display: flex;
@@ -1323,6 +1363,7 @@ canvas.trend-row-spark {
 @media (max-width: 900px) {
   .weekly-container { padding: 20px 16px; }
   .weekly-section { padding: 16px; }
+  #deepDiveContent { grid-template-columns: 1fr; }
   .weekly-cat-pie-layout { flex-direction: column; align-items: stretch; }
   .weekly-cat-pie-layout canvas { align-self: center; }
   .weekly-article-row { grid-template-columns: 1fr; }

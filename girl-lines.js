@@ -5,7 +5,7 @@
 
 const GIRL_LINES = {
   hero: [
-    'おはよう。今日のデータ、整理しておいたよ。一緒に見よう。',
+    'おはよう。今日のデータ、整理しておいたわ。……一緒に見ましょ。',
     'おっはよー！今日もデータ盛りだくさんだよ！見てみて！',
     'おはよう...ふふ、今日のデータ、穏やかに見ていこうね。',
     'おはよ。...べつに、データまとめたわけじゃないし。ほら、早く見なさいよ。',
@@ -14,7 +14,7 @@ const GIRL_LINES = {
     'おはようございます。新しい週のはじまりに、データを振り返ってみましょうね。',
   ],
   growth: [
-    '着実に積み上がってるね。継続の力って、やっぱりすごい。',
+    '着実に積み上がってるわね。……継続の力、侮れないわよ。',
     'えっ、この成長率すごくない！？めっちゃ伸びてるじゃん！',
     'ゆっくりだけど、ちゃんと伸びてるね...安心する。',
     'ふーん、まあまあじゃない。...って、結構すごいんだけど。',
@@ -23,7 +23,7 @@ const GIRL_LINES = {
     'まあ、焦らなくていいんですよ。この成長カーブ、素敵です。',
   ],
   like: [
-    'スキの数は、読者が「もう一歩踏み込んだ」証拠。大事な指標だよ。',
+    'スキの数は、読者が「もう一歩踏み込んだ」証拠よ。……大事な指標だから。',
     'スキいっぱい！みんなの気持ちが詰まってるね！',
     'スキを押してくれた人たち...一人一人の気持ちだね。',
     '...スキが多いのは、まあ、いい記事だったってことでしょ。',
@@ -32,7 +32,7 @@ const GIRL_LINES = {
     'スキを押してくださった方々の想い、大切にしたいですね。',
   ],
   hallOfFame: [
-    'この結果は、丁寧に書いた記事への正当な評価だと思うよ。',
+    'この結果は、丁寧に書いた記事への正当な評価よ。',
     'ランキング発表～！ジャジャーン！どれもいい記事だよね！',
     'よく読まれた記事たち...嬉しいね、ほんとに。',
     '...まあ、当然の結果でしょ。いい記事書いてたし。',
@@ -41,7 +41,7 @@ const GIRL_LINES = {
     'どの記事も、読者の方の大切な時間をいただいたもの。ありがたいですね。',
   ],
   hallOfShame: [
-    '失敗のデータも、次に活かせる貴重な情報だから。大丈夫。',
+    '失敗のデータも、次に活かせる貴重な情報よ。……落ち込まないの。',
     'あはは、まあこういうのもあるよ！ドンマイドンマイ！',
     '...読まれなくても、書いたこと自体に意味はあるから。',
     'べ、べつに慰めてるわけじゃないけど...次があるでしょ。',
@@ -50,7 +50,7 @@ const GIRL_LINES = {
     '失敗も含めて、全部あなたの大切な記録ですよ。',
   ],
   fans: [
-    'こうして応援してくれる人がいること、大切にしたいね。',
+    'こうして応援してくれる人がいること、大切にしなさい。',
     'すごい！こんなに常連さんいるんだ！みんなありがとー！',
     'いつも読んでくれる人たち...あったかい気持ちになるね。',
     'べつに感動とかしてないけど...ちゃんと感謝しときなさいよ。',
@@ -59,7 +59,7 @@ const GIRL_LINES = {
     '読者の皆さまのおかげで、ここまで来られたんですね。',
   ],
   eta: [
-    'スキ率は記事の質を測る重要な指標。しっかり見ていこう。',
+    'スキ率は記事の質を測る重要な指標よ。……しっかり見なさい。',
     'スキ率チェック！数字で見ると面白いよね～！',
     'スキ率って...その記事がどれだけ心に届いたかってことだよね。',
     'ふん、数字がすべてじゃないけど...スキ率は正直な指標よ。',
@@ -68,7 +68,7 @@ const GIRL_LINES = {
     'スキ率は読者の方の共感の深さ。大切にしたい数字ですね。',
   ],
   category: [
-    'どんなテーマで書いてきたか、データで可視化してみたよ。',
+    'どんなテーマで書いてきたか、可視化しておいたわ。',
     'カテゴリ分布！バランスどうかな？偏ってる？',
     'こうやって見ると、書いてきたものの全体像が見えるね...。',
     '...ちゃんとバランス考えて書いてるの？まあいいけど。',
@@ -77,7 +77,7 @@ const GIRL_LINES = {
     '記事のカテゴリを俯瞰すると、あなたらしさが見えてきますね。',
   ],
   trend: [
-    '7日間のステータス。データが語る「今」を読み取ろう。',
+    '直近2週間のスキ率よ。……カテゴリ平均との差を確認しなさい。',
     'いまの状態チェック！どんな感じかな～？',
     '今がどういう時期なのか...ちゃんと見ておこうね。',
     'いまの状況、把握しときなさいよ。...大事でしょ。',
@@ -86,7 +86,7 @@ const GIRL_LINES = {
     '直近7日間の状態を、落ち着いて確認してみましょうね。',
   ],
   journey: [
-    'ここまでの軌跡、一つ一つが大切な記録だね。',
+    'ここまでの軌跡、一つ一つが大切な記録よ。……ちゃんと見なさい。',
     'うわー！こんなにたくさん書いてきたんだ！感動！',
     'ゆっくり歩いてきた道のり...全部、大切な思い出だね。',
     'べつに感慨深いとか...思ってないし。...すごいけど。',
@@ -95,7 +95,7 @@ const GIRL_LINES = {
     '一歩一歩、丁寧に積み重ねてきた道のり。素晴らしいですね。',
   ],
   action: [
-    'データを見た。次はどう動くか。ここからが設計だよ。',
+    'データは揃ったわ。次はどう動くか。……ここからが設計よ。',
     'よーし！次のアクション、一緒に考えよ！',
     '次にやること...焦らず、一つずつでいいからね。',
     'データは揃ったでしょ。あとは動くだけよ。...頑張りなさいよ。',
@@ -897,44 +897,44 @@ const GIRL_DYNAMIC = {
   weeklyArticles: [
     // η序列の異変: EがBを超えている
     { cond: d => d.etaEoverB, lines: [
-      d => `今週は${d.weekArticleCount}本。注目すべき点がある。キャラ系（E）のスキ率がB（試行錯誤）を超えてる。ファン層が強く反応した週だね。`, null, null, null, null, null, null,
+      d => `今週は${d.weekArticleCount}本。……キャラ系のスキ率がBを超えてるわね。ファン層が強く反応した週よ。`, null, null, null, null, null, null,
     ]},
     // η序列の異変: AがBを超えている
     { cond: d => d.etaAoverB, lines: [
-      d => `今週は${d.weekArticleCount}本。設計思想（A）のスキ率がB（試行錯誤）を超えてる。Aが刺さった週だね。何が効いたか確認しよう。`, null, null, null, null, null, null,
+      d => `今週は${d.weekArticleCount}本。設計思想のスキ率がBを超えてる。何が効いたか、確認しなさい。`, null, null, null, null, null, null,
     ]},
     // カテゴリが偏っている + PVが平均超え多い
     { cond: d => d.isSingleCategory && d.aboveAvgPV >= d.weekArticleCount * 0.7, lines: [
-      d => { const nr = d.isNewDominant ? `新規${d.totalNew}人が多め。リーチが広がってる。` : `固定${d.totalReg}人が中心。ファン層に刺さった週だね。`;
+      d => { const nr = d.isNewDominant ? `新規${d.totalNew}人が多め。リーチは広がってるわ。` : `固定${d.totalReg}人が中心。ファン層に刺さった週ね。`;
         return `今週は${d.weekArticleCount}本、全て${d.singleCatName}。${d.aboveAvgPV}本がPV平均超え。${nr}`; }, null, null, null, null, null, null,
     ]},
     // カテゴリが偏っている
     { cond: d => d.isSingleCategory, lines: [
-      d => { const nr = d.isNewDominant ? `新規${d.totalNew}人が多い。` : `固定${d.totalReg}人が中心。`;
-        return `今週は${d.weekArticleCount}本、全て${d.singleCatName}。${nr}来週はカテゴリを散らすことも検討しよう。`; }, null, null, null, null, null, null,
+      d => { const nr = d.isNewDominant ? `新規${d.totalNew}人が多いわ。` : `固定${d.totalReg}人が中心ね。`;
+        return `今週は${d.weekArticleCount}本、全て${d.singleCatName}。${nr}来週はカテゴリを散らすことも検討しなさい。`; }, null, null, null, null, null, null,
     ]},
     // 新規読者が多い + 好調
     { cond: d => d.isNewDominant && d.aboveAvgPV >= d.weekArticleCount * 0.5 && d.weekArticleCount >= 1, lines: [
-      d => `今週は${d.weekArticleCount}本。新規${d.totalNew}人、固定${d.totalReg}人。新規が多い。PV平均超え${d.aboveAvgPV}本。リーチが広がっている週だね。`, null, null, null, null, null, null,
+      d => `今週は${d.weekArticleCount}本。新規${d.totalNew}人、固定${d.totalReg}人。新規が多いわね。PV平均超え${d.aboveAvgPV}本。リーチが広がってるわ。`, null, null, null, null, null, null,
     ]},
     // 固定読者が多い + 好調
     { cond: d => !d.isNewDominant && d.aboveAvgLike >= d.weekArticleCount * 0.5 && d.weekArticleCount >= 1, lines: [
-      d => `今週は${d.weekArticleCount}本。固定${d.totalReg}人、新規${d.totalNew}人。固定読者が反応してる。スキ平均超え${d.aboveAvgLike}本。ファン層に刺さった週だね。`, null, null, null, null, null, null,
+      d => `今週は${d.weekArticleCount}本。固定${d.totalReg}人、新規${d.totalNew}人。固定読者が反応してる。スキ平均超え${d.aboveAvgLike}本。悪くないわね。`, null, null, null, null, null, null,
     ]},
     // PVは高いがスキが低い
     { cond: d => d.aboveAvgPV >= d.weekArticleCount * 0.5 && d.aboveAvgLike < d.weekArticleCount * 0.3 && d.weekArticleCount >= 1, lines: [
-      d => `今週は${d.weekArticleCount}本。PVは取れてるけどスキが伸びていない。新規${d.totalNew}人、固定${d.totalReg}人。タイトル勝ちか、内容の刺さり方を確認しよう。`, null, null, null, null, null, null,
+      d => `今週は${d.weekArticleCount}本。PVは取れてるけどスキが伸びてないわ。タイトル勝ちの可能性があるわね。確認しなさい。`, null, null, null, null, null, null,
     ]},
     // 通常（記事あり）
     { cond: d => d.weekArticleCount >= 4, lines: [
-      d => `今週は${d.weekArticleCount}本。新規${d.totalNew}人、固定${d.totalReg}人。PV平均超え${d.aboveAvgPV}本、スキ平均超え${d.aboveAvgLike}本。振り返ろう。`, null, null, null, null, null, null,
+      d => `今週は${d.weekArticleCount}本。新規${d.totalNew}人、固定${d.totalReg}人。PV平均超え${d.aboveAvgPV}本、スキ平均超え${d.aboveAvgLike}本。振り返りなさい。`, null, null, null, null, null, null,
     ]},
     { cond: d => d.weekArticleCount >= 1, lines: [
-      d => `今週は${d.weekArticleCount}本。新規${d.totalNew}人、固定${d.totalReg}人。少なめだけど、質を確認しよう。`, null, null, null, null, null, null,
+      d => `今週は${d.weekArticleCount}本。少なめね。……質を確認しなさい。`, null, null, null, null, null, null,
     ]},
     // 記事なし
     { cond: d => true, lines: [
-      '今週は公開記事なし。準備期間かな。来週に備えよう。', null, null, null, null, null, null,
+      '今週は公開記事なし。……準備期間ということにしておくわ。', null, null, null, null, null, null,
     ]},
   ],
 

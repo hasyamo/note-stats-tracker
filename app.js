@@ -195,15 +195,10 @@ function processData(rows) {
   updateKPI();
   renderDailyTab();
   renderWeeklyTab();
-  // Deep Dive charts: only render if tab is visible
+  // Deep Dive: only render if tab is visible
   const ddTab = document.getElementById('tabDeepdive');
   if (ddTab && ddTab.classList.contains('active')) {
-    renderRanking();
-    renderScatter();
-    renderCategoryChart();
-    renderEtaTrend();
-    renderTrendCharts();
-    renderDecayChart();
+    renderDeepDive();
   }
   updateHeader(dates);
 }
@@ -411,14 +406,7 @@ function switchTab(tabName) {
     setTimeout(() => { renderWeeklyTab(); }, 50);
   }
   if (tabName === 'deepdive' && latestSnapshot.length > 0) {
-    setTimeout(() => {
-      renderRanking();
-      renderScatter();
-      renderCategoryChart();
-      renderEtaTrend();
-      renderTrendCharts();
-      renderDecayChart();
-    }, 50);
+    setTimeout(() => { renderDeepDive(); }, 50);
   }
 }
 
@@ -1360,6 +1348,9 @@ ${articleLines || '- なし'}
 ### 来週の提案
 ${proposalLines || '- なし'}
 
+### 参考: カテゴリ別スキ率ランキング（タイトルパターン分析用）
+${buildEtaRankingForReport()}
+
 ---
 
 ### 相談
@@ -1367,12 +1358,30 @@ ${proposalLines || '- なし'}
 1. 来週7本の記事テーマ（カテゴリ配分は提案を参考に）
 2. 今週「ひとつだけ壊す」施策（タイトル、タグ、投稿時間、構成など）
 3. 前回壊したことの評価（ミニログに記録があれば）
+4. 上記スキ率ランキングのタイトルから見える「刺さるパターン」の分析
 `;
 
   navigator.clipboard.writeText(report).then(() => {
     const btn = document.querySelector('.weekly-toolbar .commentary-copy');
     if (btn) { btn.textContent = 'Copied!'; setTimeout(() => { btn.textContent = 'レポートをコピー'; }, 2000); }
   });
+}
+
+function buildEtaRankingForReport() {
+  const catAvgs = getCategoryAvgs();
+  const CAT_ORDER = ['B', 'D', 'C', 'A', 'E']; // η sequence order
+  return CAT_ORDER.map(c => {
+    const arts = latestSnapshot
+      .filter(a => a.category === c && a.read_count > 0)
+      .map(a => ({ ...a, eta: a.like_count / a.read_count * 100 }))
+      .sort((a, b) => b.eta - a.eta)
+      .slice(0, 5);
+    if (arts.length === 0) return '';
+    const ca = catAvgs[c] || { avgPV: 0, avgLike: 0 };
+    const catEta = arts.reduce((s, a) => s + a.read_count, 0) > 0
+      ? arts.reduce((s, a) => s + a.like_count, 0) / arts.reduce((s, a) => s + a.read_count, 0) * 100 : 0;
+    return `\n**${c} ${getCategoryName(c)}** (平均η${catEta.toFixed(1)}%)\n${arts.map((a, i) => `${i + 1}. η${a.eta.toFixed(1)}% 「${a.title}」`).join('\n')}`;
+  }).filter(s => s).join('\n');
 }
 
 function buildWeeklyActionHTML(actions) {
@@ -1933,9 +1942,12 @@ function renderWeeklyAction() {}
 // ===== 1. Ranking =====
 let rankingTopN = 20;
 
+let rankingCatFilter = 'all';
+
 function renderRanking() {
   const container = document.getElementById('rankingChart');
-  const sorted = [...latestSnapshot]
+  const filtered = rankingCatFilter === 'all' ? latestSnapshot : latestSnapshot.filter(a => a.category === rankingCatFilter);
+  const sorted = [...filtered]
     .map(a => ({ ...a, eta: a.read_count > 0 ? (a.like_count / a.read_count * 100) : 0 }))
     .sort((a, b) => b.eta - a.eta);
 
@@ -2118,25 +2130,7 @@ function renderScatter() {
   canvas.onmouseleave = hideTooltip;
 }
 
-// Ranking toggle
-document.querySelectorAll('#rankingToggle .toggle-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('#rankingToggle .toggle-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    rankingTopN = parseInt(btn.dataset.top);
-    renderRanking();
-  });
-});
-
-// Scatter toggle
-document.querySelectorAll('#scatterToggle .toggle-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('#scatterToggle .toggle-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    scatterMode = btn.dataset.mode;
-    renderScatter();
-  });
-});
+// Note: ranking/scatter toggle listeners are now in renderDeepDive()
 
 // ===== 3. Category η Comparison =====
 function renderCategoryChart() {
@@ -2342,22 +2336,20 @@ function renderEtaTrend() {
     ctx.fillText(val + '%', pad.left - 8, y + 3);
   }
 
-  // Average η line
-  const avgEta = latestSnapshot.reduce((s, a) => s + a.like_count, 0) /
-                 Math.max(latestSnapshot.reduce((s, a) => s + a.read_count, 0), 1) * 100;
-  const avgY = pad.top + ch - (avgEta / maxEta) * ch;
-  ctx.strokeStyle = '#ffb02044';
-  ctx.lineWidth = 1;
-  ctx.setLineDash([6, 4]);
-  ctx.beginPath();
-  ctx.moveTo(pad.left, avgY);
-  ctx.lineTo(W - pad.right, avgY);
-  ctx.stroke();
-  ctx.setLineDash([]);
-  ctx.fillStyle = '#ffb02077';
-  ctx.font = '11px JetBrains Mono';
-  ctx.textAlign = 'left';
-  ctx.fillText(`全体平均 η=${avgEta.toFixed(1)}%`, pad.left + 4, avgY - 6);
+  // Category averages for comparison (last 30 days)
+  const thirtyDaysAgo = formatDate(new Date(parseDate(latestDate).getTime() - 29 * 86400000));
+  const catEtas = {};
+  ['A','B','C','D','E','F','G'].forEach(c => {
+    const arts = latestSnapshot.filter(a => {
+      if (a.category !== c) return false;
+      const pub = a.published_at ? a.published_at.slice(0, 10) : '';
+      return pub >= thirtyDaysAgo && pub <= latestDate;
+    });
+    if (arts.length === 0) return;
+    const totalPV = arts.reduce((s, a) => s + a.read_count, 0);
+    const totalLike = arts.reduce((s, a) => s + a.like_count, 0);
+    catEtas[c] = totalPV > 0 ? totalLike / totalPV * 100 : 0;
+  });
 
   // X axis - 14 day slots
   const slotWidth = cw / daySlots.length;
@@ -2387,10 +2379,6 @@ function renderEtaTrend() {
     ctx.fillText(label, x, H - pad.bottom + 16);
     ctx.fillText(dowLabel, x, H - pad.bottom + 30);
   });
-
-  // Average η for color thresholds
-  const avgEtaForColor = latestSnapshot.reduce((s, a) => s + a.like_count, 0) /
-                 Math.max(latestSnapshot.reduce((s, a) => s + a.read_count, 0), 1) * 100;
 
   // Plot dots
   const plotPoints = [];
@@ -2441,9 +2429,17 @@ function renderEtaTrend() {
 
       // η label above dot
       ctx.fillStyle = color;
-      ctx.font = '12px JetBrains Mono';
+      ctx.font = 'bold 12px JetBrains Mono';
       ctx.textAlign = 'center';
       ctx.fillText(a.eta.toFixed(1) + '%', px, cy - 12);
+
+      // Category avg diff below dot
+      const catEta = catEtas[cat] || 0;
+      const diff = a.eta - catEta;
+      const diffStr = diff >= 0 ? `+${diff.toFixed(1)}` : diff.toFixed(1);
+      ctx.font = '9px JetBrains Mono';
+      ctx.fillStyle = diff >= 0 ? '#00e676' : '#ff3d8e';
+      ctx.fillText(diffStr, px, cy + 16);
 
       plotPoints.push({ x: px, y: cy, color, ...a });
     });
@@ -2453,9 +2449,36 @@ function renderEtaTrend() {
 
   // Legend - category colors
   const legend = document.getElementById('etaTrendLegend');
-  legend.innerHTML = Object.entries(CATEGORY_META).map(([k, v]) =>
-    `<div class="decay-legend-item"><div class="decay-legend-dot" style="background:${v.color}"></div>${k} ${v.name}</div>`
-  ).join('') + `<div class="decay-legend-item" style="margin-left:12px;color:#ffb02077">--- 全体平均 η=${avgEtaForColor.toFixed(1)}%</div>`;
+  legend.innerHTML = Object.entries(CATEGORY_META).map(([k, v]) => {
+    const ce = catEtas[k];
+    return ce ? `<div class="decay-legend-item"><div class="decay-legend-dot" style="background:${v.color}"></div>${k} ${v.name} (η${ce.toFixed(1)}%)</div>` : '';
+  }).join('') + `<div class="decay-legend-item" style="margin-left:12px;color:var(--text-muted)">数値は直近30日のカテゴリ平均との差</div>`;
+
+  // Report card (通信簿)
+  const reportEl = document.getElementById('etaTrendReport');
+  const reportCats = ['A','B','C','D','E'].filter(c => {
+    return recentArticles.some(a => a.category === c) && catEtas[c];
+  });
+  if (reportCats.length > 0) {
+    const cards = reportCats.map(c => {
+      const arts = recentArticles.filter(a => a.category === c);
+      const avgDiff = arts.reduce((s, a) => s + (a.eta - (catEtas[c] || 0)), 0) / arts.length;
+      const score = Math.max(0, Math.min(100, Math.round(50 + avgDiff * 10)));
+      const color = getCategoryColor(c);
+      const grade = score >= 80 ? 'A' : score >= 60 ? 'B' : score >= 40 ? 'C' : score >= 20 ? 'D' : 'E';
+      return `<div style="text-align:center;flex:1;min-width:80px">
+        <div style="font-family:var(--font-mono);font-size:11px;color:${color};font-weight:600;margin-bottom:4px">${c} ${getCategoryName(c)}</div>
+        <div style="font-size:28px;font-weight:900;color:${score >= 50 ? 'var(--accent-green)' : 'var(--accent-pink)'}">${score}</div>
+        <div style="font-size:10px;color:var(--text-muted)">${arts.length}本 / 平均差${avgDiff >= 0 ? '+' : ''}${avgDiff.toFixed(1)}pt</div>
+      </div>`;
+    }).join('');
+    reportEl.innerHTML = `<div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
+      <div style="font-family:var(--font-mono);font-size:12px;color:var(--text-muted);margin-bottom:12px">直近2週間の通信簿（50点=カテゴリ平均）</div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap">${cards}</div>
+    </div>`;
+  } else {
+    reportEl.innerHTML = '';
+  }
 
   // Tooltip
   canvas.onmousemove = (e) => {
@@ -2686,22 +2709,9 @@ function renderTrendCharts() {
   renderTrendRows();
 }
 
-// Tab switching
-document.querySelectorAll('.trend-tab').forEach(tab => {
-  tab.addEventListener('click', () => {
-    document.querySelectorAll('.trend-tab').forEach(t => t.classList.remove('active'));
-    tab.classList.add('active');
-    trendActiveMetric = tab.dataset.metric;
-    renderTrendRows();
-  });
-});
+// Note: trend tab listeners are now in renderDeepDive()
 
-// Filter event listeners
-['trendDayFilter', 'trendMinDelta', 'trendCatFilter'].forEach(id => {
-  document.getElementById(id).addEventListener('change', () => {
-    renderTrendRows();
-  });
-});
+// Note: trend filter listeners are now in renderDeepDive()
 
 // ===== 5. Decay Curve =====
 function renderDecayChart() {
@@ -2958,6 +2968,420 @@ function renderDecayChart() {
     '<span class="decay-legend-item"><span style="display:inline-block;width:12px;height:10px;border:1px solid rgba(0,212,255,0.5);background:rgba(0,212,255,0.12);vertical-align:middle;margin-right:4px;"></span>Q1〜Q3</span>';
 }
 
+// ===== Deep Dive Rendering =====
+function renderDeepDive() {
+  const el = document.getElementById('deepDiveContent');
+
+  let html = '';
+
+  // 1. スキ率ランキング (月子=0)
+  html += `<div>`;
+  html += weeklyNavi(0, 'eta');
+  html += `<div class="weekly-section">
+    <div class="weekly-section-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap">
+      <span>スキ率ランキング</span>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <div class="toggle-group" id="rankingCatToggle">
+          <div class="toggle-btn active" data-cat="all">全体</div>
+          <div class="toggle-btn" data-cat="A">A</div>
+          <div class="toggle-btn" data-cat="B">B</div>
+          <div class="toggle-btn" data-cat="C">C</div>
+          <div class="toggle-btn" data-cat="D">D</div>
+          <div class="toggle-btn" data-cat="E">E</div>
+        </div>
+        <div class="toggle-group" id="rankingToggle">
+          <div class="toggle-btn" data-top="5">5</div>
+          <div class="toggle-btn" data-top="10">10</div>
+          <div class="toggle-btn active" data-top="20">20</div>
+        </div>
+      </div>
+    </div>
+    <div class="bar-chart" id="rankingChart"><div class="no-data">読み込み中...</div></div>
+    <div class="decay-legend" id="rankingLegend"></div>
+  </div></div>`;
+
+  // 2. カテゴリ別コメ/スキ率 (日和=6)
+  html += `<div>`;
+  html += weeklyNavi(6, 'category');
+  html += `<div class="weekly-section">
+    <div class="weekly-section-title">カテゴリ別 コメント/スキ率</div>
+    <div class="dd-canvas-wrap"><canvas id="commentLikeRatioCanvas"></canvas></div>
+  </div></div>`;
+
+  // 3. 直近2週間スキ率推移 (月子=0) — full width
+  html += `<div class="dd-full">`;
+  html += weeklyNavi(0, 'trend');
+  html += `<div class="weekly-section">
+    <div class="weekly-section-title">直近2週間 スキ率推移 <span class="panel-badge" id="etaTrendBadge">--</span></div>
+    <div class="dd-canvas-wrap"><canvas id="etaTrendCanvas"></canvas></div>
+    <div class="decay-legend" id="etaTrendLegend"></div>
+    <div id="etaTrendReport"></div>
+  </div></div>`;
+
+  // 4. 記事別日次推移 (しずく=2) — full width
+  html += `<div class="dd-full">`;
+  html += weeklyNavi(2, 'journey');
+  html += `<div class="weekly-section">
+    <div class="weekly-section-title">記事別 日次推移 <span class="panel-badge" id="trendBadge">--</span></div>
+    <div class="trend-tabs">
+      <div class="trend-tab active" data-metric="pv_delta">PV</div>
+      <div class="trend-tab" data-metric="like_delta">スキ</div>
+    </div>
+    <div class="trend-filters">
+      <label>投稿日: 直近
+        <select id="trendDayFilter">
+          <option value="7" selected>7日</option>
+          <option value="14">14日</option>
+          <option value="30">30日</option>
+          <option value="0">すべて</option>
+        </select>
+      </label>
+      <label>増分 ≥ <input id="trendMinDelta" type="number" value="0" min="0" style="width:60px"></label>
+      <label>カテゴリ:
+        <select id="trendCatFilter">
+          <option value="">すべて</option>
+          <option value="A">A 設計思想</option>
+          <option value="B">B 試行錯誤</option>
+          <option value="C">C ハウツー</option>
+          <option value="D">D 振り返り</option>
+          <option value="E">E キャラ系</option>
+        </select>
+      </label>
+    </div>
+    <div class="trend-rows" id="trendRows"><div class="no-data">読み込み中...</div></div>
+  </div></div>`;
+
+  // 4. 減衰カーブ (凛華=3) — full width
+  html += `<div class="dd-full">`;
+  html += weeklyNavi(3, 'action');
+  html += `<div class="weekly-section">
+    <div class="weekly-section-title">記事の消費期限：公開からのPV減衰 <span class="panel-badge" id="decayBadge">--</span></div>
+    <div class="dd-canvas-wrap"><canvas id="decayCanvas"></canvas></div>
+    <div class="decay-legend" id="decayLegend"></div>
+  </div></div>`;
+
+  // 6. スキランキング（人） (るな=4) — full width, 2-column cards
+  html += `<div class="dd-full">`;
+  html += weeklyNavi(4, 'fans');
+  html += `<div class="weekly-section">
+    <div class="weekly-section-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap">
+      <span>スキランキング</span>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <button class="commentary-copy" onclick="openSukiScreenshot()" style="font-size:11px;padding:3px 10px">スクショ用</button>
+      <div class="toggle-group" id="sukiPeriodToggle">
+        <div class="toggle-btn active" data-period="week">今週</div>
+        <div class="toggle-btn" data-period="lastweek">先週</div>
+        <div class="toggle-btn" data-period="month">今月</div>
+        <div class="toggle-btn" data-period="lastmonth">先月</div>
+      </div></div>
+    </div>
+    <div id="sukiRankingContent"><div class="no-data">読み込み中...</div></div>
+  </div></div>`;
+
+  el.innerHTML = html;
+
+  // Re-attach event listeners for toggle buttons (since DOM was replaced)
+  document.querySelectorAll('#rankingCatToggle .toggle-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#rankingCatToggle .toggle-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      rankingCatFilter = btn.dataset.cat;
+      renderRanking();
+    });
+  });
+  document.querySelectorAll('#rankingToggle .toggle-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#rankingToggle .toggle-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      rankingTopN = parseInt(btn.dataset.top);
+      renderRanking();
+    });
+  });
+  document.querySelectorAll('#sukiPeriodToggle .toggle-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#sukiPeriodToggle .toggle-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      sukiPeriod = btn.dataset.period;
+      renderSukiRanking();
+    });
+  });
+
+  // Trend tab/filter listeners
+  document.querySelectorAll('.trend-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.trend-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      trendActiveMetric = tab.dataset.metric;
+      renderTrendRows();
+    });
+  });
+  ['trendDayFilter', 'trendMinDelta', 'trendCatFilter'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('change', () => { renderTrendRows(); });
+  });
+
+  // Render all charts (delay to ensure layout is complete)
+  setTimeout(() => {
+    renderRanking();
+    renderEtaTrend();
+    renderTrendCharts();
+    renderDecayChart();
+    renderSukiRanking();
+    renderCommentByChar();
+  }, 200);
+}
+
+// ===== 6. Suki Ranking (people, period selectable) =====
+let sukiPeriod = 'week';
+
+function getSukiPeriodRange(period) {
+  const src = summaryData.length > 0 ? summaryData : dailySummary;
+  const dataDate = src.length > 0 ? src[src.length - 1].date : getTodayJST();
+  const today = parseDate(dataDate);
+
+  if (period === 'week') {
+    const mon = getMondayOf(dataDate);
+    const sun = new Date(parseDate(mon)); sun.setDate(sun.getDate() + 6);
+    return { start: mon, end: formatDate(sun) };
+  }
+  if (period === 'lastweek') {
+    const mon = parseDate(getMondayOf(dataDate));
+    mon.setDate(mon.getDate() - 7);
+    const sun = new Date(mon); sun.setDate(sun.getDate() + 6);
+    return { start: formatDate(mon), end: formatDate(sun) };
+  }
+  if (period === 'month') {
+    const start = dataDate.slice(0, 7) + '-01';
+    return { start, end: dataDate };
+  }
+  if (period === 'lastmonth') {
+    const d = parseDate(dataDate);
+    d.setMonth(d.getMonth() - 1);
+    const start = formatDate(d).slice(0, 7) + '-01';
+    const endD = parseDate(dataDate.slice(0, 7) + '-01');
+    endD.setDate(endD.getDate() - 1);
+    return { start, end: formatDate(endD) };
+  }
+  return { start: '', end: dataDate };
+}
+
+function renderSukiRanking() {
+  const el = document.getElementById('sukiRankingContent');
+  if (likesData.length === 0) { el.innerHTML = '<div class="no-data">likes.csv データなし</div>'; return; }
+
+  const range = getSukiPeriodRange(sukiPeriod);
+  const periodLikes = likesData.filter(l => {
+    const d = (l.liked_at || '').slice(0, 10);
+    return d >= range.start && d <= range.end;
+  });
+
+  // Total likes per user (all time) for tiebreaker
+  const totalByUser = {};
+  likesData.forEach(l => {
+    const uid = l.like_user_id;
+    totalByUser[uid] = (totalByUser[uid] || 0) + 1;
+  });
+
+  // Count by user in period
+  const userMap = {};
+  periodLikes.forEach(l => {
+    const uid = l.like_user_id;
+    if (!userMap[uid]) {
+      userMap[uid] = {
+        name: l.like_username || l.like_user_urlname || uid,
+        urlname: l.like_user_urlname || '',
+        count: 0,
+        totalCount: totalByUser[uid] || 0,
+        followerCount: parseInt(l.follower_count) || 0,
+      };
+    }
+    userMap[uid].count++;
+  });
+
+  const ranked = Object.values(userMap).sort((a, b) => b.count - a.count || b.totalCount - a.totalCount).slice(0, 20);
+
+  if (ranked.length === 0) {
+    el.innerHTML = `<div class="no-data">この期間のスキデータなし（${range.start}〜${range.end}）</div>`;
+    return;
+  }
+
+  function sukiCard(u, i) {
+    const profileUrl = u.urlname ? `https://note.com/${u.urlname}` : '#';
+    return `<div class="weekly-person">
+      <div style="font-family:var(--font-mono);font-size:18px;font-weight:700;color:var(--accent-pink);min-width:28px;text-align:center">${i + 1}</div>
+      <img class="weekly-person-avatar" data-urlname="${u.urlname}" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='36' height='36'%3E%3Crect fill='%23333' width='36' height='36' rx='18'/%3E%3C/svg%3E" alt="">
+      <div class="weekly-person-name">
+        <a href="${profileUrl}" target="_blank" rel="noopener">${u.name}</a>
+      </div>
+      <div class="weekly-person-stats">
+        <div>${u.count}スキ</div>
+        <div>${u.followerCount.toLocaleString()} followers</div>
+      </div>
+    </div>`;
+  }
+
+  const half = Math.ceil(ranked.length / 2);
+  const left = ranked.slice(0, half);
+  const right = ranked.slice(half);
+
+  el.innerHTML = `
+    <div style="font-size:11px;color:var(--text-muted);margin-bottom:12px">${range.start}〜${range.end}</div>
+    <div class="suki-ranking-grid">
+      <div>${left.map((u, i) => sukiCard(u, i)).join('')}</div>
+      <div>${right.map((u, i) => sukiCard(u, i + half)).join('')}</div>
+    </div>`;
+
+  loadWeeklyAvatars();
+}
+
+// Note: suki period toggle listeners are now in renderDeepDive()
+
+function openSukiScreenshot() {
+  const range = getSukiPeriodRange(sukiPeriod);
+  const periodLikes = likesData.filter(l => {
+    const d = (l.liked_at || '').slice(0, 10);
+    return d >= range.start && d <= range.end;
+  });
+
+  const totalByUser = {};
+  likesData.forEach(l => { totalByUser[l.like_user_id] = (totalByUser[l.like_user_id] || 0) + 1; });
+
+  const userMap = {};
+  periodLikes.forEach(l => {
+    const uid = l.like_user_id;
+    if (!userMap[uid]) {
+      userMap[uid] = { name: l.like_username || l.like_user_urlname || uid, urlname: l.like_user_urlname || '', count: 0, totalCount: totalByUser[uid] || 0, followerCount: parseInt(l.follower_count) || 0 };
+    }
+    userMap[uid].count++;
+  });
+
+  const ranked = Object.values(userMap).sort((a, b) => b.count - a.count || b.totalCount - a.totalCount).slice(0, 10);
+
+  const periodLabels = { week: '今週', lastweek: '先週', month: '今月', lastmonth: '先月' };
+  const FAN_THANKS = [
+    'いつもありがとう。一番の読者だよ。',
+    'あなたのスキが、書く力になってます。',
+    '毎回読んでくれて、ほんとに嬉しい。',
+    '常連さん...照れる。',
+    'スキの通知、いつも見てるよ。',
+    'あなたがいるから、書き続けられる。',
+    'ありがとう。これからもよろしくね。',
+    '応援してくれて、感謝してます。',
+    'いつも反応してくれて嬉しい。',
+    'あなたの存在が、励みになってます。',
+  ];
+
+  const left = ranked.slice(0, 5);
+  const right = ranked.slice(5, 10);
+
+  function cardHTML(u, i) {
+    return `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#fff;border-radius:12px;border:1px solid rgba(108,92,231,0.12);margin-bottom:6px;${i === 0 ? 'box-shadow:0 4px 16px rgba(108,92,231,0.1);' : ''}">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:24px;color:${i === 0 ? '#fd79a8' : i <= 2 ? '#6c5ce7' : '#ccc'};min-width:28px;text-align:center">${i + 1}</div>
+      <img class="weekly-person-avatar" data-urlname="${u.urlname}" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='36' height='36'%3E%3Crect fill='%23eee' width='36' height='36' rx='18'/%3E%3C/svg%3E" alt="" style="border:2px solid ${i === 0 ? '#fd79a8' : '#6c5ce7'}">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:700;color:#333">${u.name}さん</div>
+        <div style="font-size:10px;color:#fd79a8;margin-top:1px;font-style:italic">${FAN_THANKS[i] || ''}</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:#fd79a8">${u.count}</div>
+        <div style="font-size:9px;color:#999">スキ</div>
+      </div>
+    </div>`;
+  }
+
+  const html = `
+    <div style="background:#fffbf2;color:#0a0a14;border-radius:20px;padding:28px 24px;font-family:'Noto Sans JP',sans-serif;max-width:720px">
+      <div style="text-align:center;margin-bottom:20px">
+        <div style="font-size:22px;font-weight:900;color:#333"><span style="font-size:1.5em;font-weight:900;color:#6c5ce7">い</span>つもスキしてくれる人</div>
+        <div style="font-size:12px;color:#999;margin-top:4px">${periodLabels[sukiPeriod] || ''} ${getDayLabel(range.start)}〜${getDayLabel(range.end)}</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 16px">
+        <div>${left.map((u, i) => cardHTML(u, i)).join('')}</div>
+        <div>${right.map((u, i) => cardHTML(u, i + 5)).join('')}</div>
+      </div>
+      <div style="text-align:center;margin-top:16px;font-size:10px;color:#ccc;letter-spacing:2px">ohayou kanojo / hasyamo</div>
+    </div>`;
+
+  document.getElementById('sukiScreenshotContent').innerHTML = html;
+  document.getElementById('sukiScreenshotModal').style.display = '';
+  loadWeeklyAvatars();
+}
+
+function closeSukiScreenshot() {
+  document.getElementById('sukiScreenshotModal').style.display = 'none';
+}
+
+// ===== 7. Comment count by character (day of week) =====
+function renderCommentByChar() {
+  const canvas = document.getElementById('commentLikeRatioCanvas');
+  if (!canvas || latestSnapshot.length === 0) return;
+
+  // Compute comment/like ratio by category (comments halved for self-replies)
+  const CAT_ORDER = ['A', 'B', 'C', 'D', 'E'];
+  const catData = [];
+  CAT_ORDER.forEach(c => {
+    const arts = latestSnapshot.filter(a => a.category === c);
+    if (arts.length === 0) return;
+    const likes = arts.reduce((s, a) => s + a.like_count, 0);
+    const comments = arts.reduce((s, a) => s + a.comment_count, 0);
+    const ratio = likes > 0 ? (comments / 2) / likes * 100 : 0;
+    catData.push({ cat: c, name: getCategoryName(c), color: getCategoryColor(c), ratio, articles: arts.length, likes, comments: Math.round(comments / 2) });
+  });
+
+  const ctx = canvas.getContext('2d');
+  const W = canvas.parentElement.clientWidth;
+  const H = 300;
+  canvas.width = W * 2; canvas.height = H * 2;
+  canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
+  ctx.scale(2, 2);
+
+  const pad = { t: 20, b: 50, l: 50, r: 20 };
+  const cw = W - pad.l - pad.r;
+  const ch = H - pad.t - pad.b;
+  const maxRatio = Math.max(...catData.map(d => d.ratio), 1);
+
+  // Grid
+  ctx.strokeStyle = '#2a2a3a'; ctx.lineWidth = 0.5;
+  for (let i = 0; i <= 4; i++) {
+    const y = pad.t + (ch / 4) * i;
+    ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(W - pad.r, y); ctx.stroke();
+    ctx.fillStyle = '#666'; ctx.font = '10px JetBrains Mono'; ctx.textAlign = 'right';
+    ctx.fillText(Math.round(maxRatio * (1 - i / 4)) + '%', pad.l - 6, y + 4);
+  }
+
+  // Bars
+  const barW = Math.min(60, cw / catData.length * 0.6);
+  const gap = (cw - barW * catData.length) / (catData.length + 1);
+
+  catData.forEach((d, i) => {
+    const x = pad.l + gap + i * (barW + gap);
+    const barH = (d.ratio / maxRatio) * ch;
+    const y = pad.t + ch - barH;
+
+    // Bar
+    ctx.fillStyle = d.color;
+    ctx.fillRect(x, y, barW, barH);
+
+    // Value on top
+    ctx.fillStyle = d.color;
+    ctx.font = 'bold 12px JetBrains Mono';
+    ctx.textAlign = 'center';
+    ctx.fillText(d.ratio.toFixed(1) + '%', x + barW / 2, y - 8);
+
+    // Category label
+    ctx.fillStyle = '#999';
+    ctx.font = '11px JetBrains Mono';
+    ctx.fillText(d.cat, x + barW / 2, H - pad.b + 14);
+    ctx.font = '10px Noto Sans JP';
+    ctx.fillText(d.name, x + barW / 2, H - pad.b + 28);
+
+    // Article count
+    ctx.fillStyle = '#555';
+    ctx.font = '9px JetBrains Mono';
+    ctx.fillText(d.articles + '本', x + barW / 2, H - pad.b + 42);
+  });
+}
+
 // ===== Tooltip =====
 function showTooltip(e, title, body) {
   const tt = document.getElementById('tooltip');
@@ -3057,8 +3481,6 @@ window.addEventListener('resize', () => {
   if (latestSnapshot.length > 0) {
     const ddTab = document.getElementById('tabDeepdive');
     if (ddTab && ddTab.classList.contains('active')) {
-      renderScatter();
-      renderCategoryChart();
       renderEtaTrend();
       renderTrendCharts();
       renderDecayChart();
