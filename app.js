@@ -3425,7 +3425,7 @@ function renderSukiRanking() {
   const right = ranked.slice(half);
 
   el.innerHTML = `
-    <div style="font-size:11px;color:var(--text-muted);margin-bottom:12px">${range.start}〜${range.end}</div>
+    <div style="font-size:11px;color:var(--text-muted);margin-bottom:12px">${getDayLabel(range.start)}〜${getDayLabel(range.end)}</div>
     <div class="suki-ranking-grid">
       <div>${left.map((u, i) => sukiCard(u, i)).join('')}</div>
       <div>${right.map((u, i) => sukiCard(u, i + half)).join('')}</div>
@@ -3450,12 +3450,41 @@ function openSukiScreenshot() {
   periodLikes.forEach(l => {
     const uid = l.like_user_id;
     if (!userMap[uid]) {
-      userMap[uid] = { name: l.like_username || l.like_user_urlname || uid, urlname: l.like_user_urlname || '', count: 0, totalCount: totalByUser[uid] || 0, followerCount: parseInt(l.follower_count) || 0 };
+      userMap[uid] = { uid, name: l.like_username || l.like_user_urlname || uid, urlname: l.like_user_urlname || '', count: 0, totalCount: totalByUser[uid] || 0, followerCount: parseInt(l.follower_count) || 0 };
     }
     userMap[uid].count++;
   });
 
   const ranked = Object.values(userMap).sort((a, b) => b.count - a.count || b.totalCount - a.totalCount).slice(0, 10);
+
+  // Check if #1 was also #1 in previous period
+  const prevPeriodKey = sukiPeriod === 'week' ? 'lastweek' : sukiPeriod === 'month' ? 'lastmonth' : null;
+  let prevTop1Uid = null;
+  if (prevPeriodKey) {
+    const prevRange = getSukiPeriodRange(prevPeriodKey);
+    const prevPeriodLikes = likesData.filter(l => {
+      const d = (l.liked_at || '').slice(0, 10);
+      return d >= prevRange.start && d <= prevRange.end;
+    });
+    const prevCounts = {};
+    prevPeriodLikes.forEach(l => { prevCounts[l.like_user_id] = (prevCounts[l.like_user_id] || 0) + 1; });
+    const prevRanked = Object.entries(prevCounts).sort((a, b) => b[1] - a[1]);
+    if (prevRanked.length > 0) prevTop1Uid = prevRanked[0][0];
+  }
+
+  // Runa's line for screenshot
+  let runaLine = '';
+  if (ranked.length > 0) {
+    const top1 = ranked[0];
+    const cat = (_dailyRenderData.rankUserCategory || {})[top1.uid] || '';
+    if (prevTop1Uid && top1.uid === prevTop1Uid) {
+      runaLine = `${top1.name}さん、2週連続1位！もう殿堂入りだね！ありがとー！`;
+    } else if (cat === 'new') {
+      runaLine = `${top1.name}さん、初めての1位だよ！嬉しいね！これからもよろしくね！`;
+    } else {
+      runaLine = `${top1.name}さんが${top1.count}回もスキしてくれたよ！いつもありがとね！`;
+    }
+  }
 
   const periodLabels = { week: '今週', lastweek: '先週', month: '今月', lastmonth: '先月' };
   const FAN_THANKS = [
@@ -3475,11 +3504,18 @@ function openSukiScreenshot() {
   const right = ranked.slice(5, 10);
 
   function cardHTML(u, i) {
+    const cat = (_dailyRenderData.rankUserCategory || {})[u.uid] || '';
+    const avatarStyle = i === 0
+      ? 'border:3px solid #d4af37;box-shadow:0 2px 8px rgba(0,0,0,0.15);'
+      : 'border:2px solid #6c5ce7;box-shadow:0 2px 8px rgba(0,0,0,0.15);';
+    const badge = cat === 'regular' ? '<span style="font-size:9px;background:#d4af37;color:#fff;padding:1px 5px;border-radius:8px;margin-left:4px;font-weight:400">常連</span>'
+      : cat === 'new' ? '<span style="font-size:9px;background:#6c5ce7;color:#fff;padding:1px 5px;border-radius:8px;margin-left:4px;font-weight:400">New</span>'
+      : '';
     return `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#fff;border-radius:12px;border:1px solid rgba(108,92,231,0.12);margin-bottom:6px;${i === 0 ? 'box-shadow:0 4px 16px rgba(108,92,231,0.1);' : ''}">
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:24px;color:${i === 0 ? '#fd79a8' : i <= 2 ? '#6c5ce7' : '#ccc'};min-width:28px;text-align:center">${i + 1}</div>
-      <img class="weekly-person-avatar" data-urlname="${u.urlname}" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='36' height='36'%3E%3Crect fill='%23eee' width='36' height='36' rx='18'/%3E%3C/svg%3E" alt="" style="border:2px solid ${i === 0 ? '#fd79a8' : '#6c5ce7'}">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:24px;color:${i === 0 ? '#d4af37' : i === 1 ? '#c0c0c0' : i === 2 ? '#cd7f32' : '#ccc'};min-width:28px;text-align:center">${i + 1}</div>
+      <img class="weekly-person-avatar" data-urlname="${u.urlname}" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='36' height='36'%3E%3Crect fill='%23eee' width='36' height='36' rx='18'/%3E%3C/svg%3E" alt="" style="border-radius:50%;${avatarStyle}">
       <div style="flex:1;min-width:0">
-        <div style="font-size:13px;font-weight:700;color:#333">${u.name}さん</div>
+        <div style="font-size:13px;font-weight:700;color:#333">${u.name}さん${badge}</div>
         <div style="font-size:10px;color:#fd79a8;margin-top:1px;font-style:italic">${FAN_THANKS[i] || ''}</div>
       </div>
       <div style="text-align:right">
@@ -3495,6 +3531,14 @@ function openSukiScreenshot() {
         <div style="font-size:22px;font-weight:900;color:#333"><span style="font-size:1.5em;font-weight:900;color:#6c5ce7">い</span>つもスキしてくれる人</div>
         <div style="font-size:12px;color:#999;margin-top:4px">${periodLabels[sukiPeriod] || ''} ${getDayLabel(range.start)}〜${getDayLabel(range.end)}</div>
       </div>
+      ${runaLine ? `<div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:20px;padding:0 4px">
+        <img src="images/eyes-thumb/eyes-fri.webp" alt="るな" style="width:40px;height:40px;border-radius:50%;flex-shrink:0;border:2px solid #6c5ce7;box-shadow:0 2px 6px rgba(0,0,0,0.1)">
+        <div style="position:relative;background:#fff;border:1px solid rgba(108,92,231,0.15);border-radius:12px;padding:10px 14px;font-size:13px;color:#333;box-shadow:0 2px 6px rgba(0,0,0,0.06);margin-top:6px">
+          <div style="position:absolute;left:-7px;top:10px;width:12px;height:12px;background:#fff;border-left:1px solid rgba(108,92,231,0.15);border-bottom:1px solid rgba(108,92,231,0.15);transform:rotate(45deg)"></div>
+          <div style="font-size:10px;color:#6c5ce7;font-weight:600;margin-bottom:2px">るな</div>
+          ${runaLine}
+        </div>
+      </div>` : ''}
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 16px">
         <div>${left.map((u, i) => cardHTML(u, i)).join('')}</div>
         <div>${right.map((u, i) => cardHTML(u, i + 5)).join('')}</div>

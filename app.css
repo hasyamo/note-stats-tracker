@@ -1095,6 +1095,30 @@ canvas.trend-row-spark {
 .weekly-person-avatar.avatar-regular {
   box-shadow: 0 0 0 2px #1a1a2e, 0 0 0 4px #d4af37;
 }
+.weekly-person-avatar.avatar-rank-1 {
+  box-shadow: 0 0 0 2px #1a1a2e, 0 0 0 4px #d4af37, 0 0 12px rgba(212,175,55,0.4);
+}
+.weekly-person-avatar.avatar-rank-2 {
+  box-shadow: 0 0 0 2px #1a1a2e, 0 0 0 4px #c0c0c0, 0 0 8px rgba(192,192,192,0.3);
+}
+.weekly-person-avatar.avatar-rank-3 {
+  box-shadow: 0 0 0 2px #1a1a2e, 0 0 0 4px #cd7f32, 0 0 8px rgba(205,127,50,0.3);
+}
+.user-badge {
+  font-size: 9px;
+  padding: 1px 6px;
+  border-radius: 8px;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+.badge-regular {
+  background: #d4af37;
+  color: #1a1a2e;
+}
+.badge-new {
+  background: var(--accent-cyan);
+  color: #1a1a2e;
+}
 
 .weekly-person {
   display: flex;
