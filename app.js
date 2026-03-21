@@ -661,6 +661,10 @@ function renderActivityTab() {
   html += weeklyNavi(1, 'weeklyFollower');
   html += `<div class="weekly-section">
     <div class="weekly-section-title">フォロワー推移（4週間）<span style="margin-left:12px;color:${fDiff >= 0 ? 'var(--accent-green)' : 'var(--accent-pink)'};font-size:13px">${latest.followerCount}人（${fSign}${fDiff}）</span></div>
+    <div style="display:flex;gap:16px;font-size:10px;color:var(--text-muted);margin-bottom:4px">
+      <span><span style="color:var(--accent-pink)">━</span> フォロワー</span>
+      <span><span style="color:var(--accent-cyan);opacity:0.5">█</span> 自分のスキ数</span>
+    </div>
     <div class="weekly-follower-chart"><canvas id="activityFollowerCanvas"></canvas></div>
   </div>`;
 
@@ -704,6 +708,17 @@ function drawActivityFollowerChart() {
   const min = Math.min(...values);
   const max = Math.max(...values);
   const PINK = '#fd79a8';
+  const CYAN = '#00d4ff';
+
+  // Build my suki counts per date
+  const mySukiByDate = {};
+  myLikesData.forEach(l => {
+    const d = (l.liked_at || '').slice(0, 10);
+    if (d) mySukiByDate[d] = (mySukiByDate[d] || 0) + 1;
+  });
+  const sukiValues = last28.map(d => mySukiByDate[d.date] || 0);
+  const sukiMax = Math.max(...sukiValues, 1);
+
   const canvas = document.getElementById('activityFollowerCanvas');
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
@@ -712,10 +727,12 @@ function drawActivityFollowerChart() {
   canvas.width = W * 2; canvas.height = H * 2;
   canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
   ctx.scale(2, 2);
-  const pad = { t: 10, b: 30, l: 40, r: 10 };
+  const pad = { t: 10, b: 30, l: 40, r: 36 };
   const cw = W - pad.l - pad.r;
   const ch = H - pad.t - pad.b;
   const range = max - min || 1;
+
+  // Left axis grid (followers)
   ctx.strokeStyle = '#2a2a3a'; ctx.lineWidth = 0.5;
   for (let i = 0; i <= 4; i++) {
     const y = pad.t + ch * i / 4;
@@ -723,21 +740,48 @@ function drawActivityFollowerChart() {
     ctx.fillStyle = '#666'; ctx.font = '10px JetBrains Mono'; ctx.textAlign = 'right';
     ctx.fillText(Math.round(max - range * i / 4), pad.l - 4, y + 4);
   }
+
+  // Right axis labels (suki count)
+  ctx.fillStyle = CYAN; ctx.font = '10px JetBrains Mono'; ctx.textAlign = 'left';
+  for (let i = 0; i <= 4; i++) {
+    const y = pad.t + ch * i / 4;
+    ctx.fillText(Math.round(sukiMax * (1 - i / 4)), W - pad.r + 4, y + 4);
+  }
+
+  // X labels
   ctx.fillStyle = '#666'; ctx.font = '9px JetBrains Mono'; ctx.textAlign = 'center';
   const step = Math.max(1, Math.floor(labels.length / 6));
   labels.forEach((l, i) => { if (i % step === 0 || i === labels.length - 1) ctx.fillText(l, pad.l + cw * i / (labels.length - 1), H - 8); });
+
+  // Monday dashed lines
   ctx.strokeStyle = '#3a3a4a'; ctx.lineWidth = 0.5; ctx.setLineDash([4, 4]);
   last28.forEach((d, i) => { if (parseDate(d.date).getDay() === 1) { const x = pad.l + cw * i / (values.length - 1); ctx.beginPath(); ctx.moveTo(x, pad.t); ctx.lineTo(x, pad.t + ch); ctx.stroke(); } });
   ctx.setLineDash([]);
+
+  // Suki bars
+  const barW = Math.max(2, cw / labels.length * 0.5);
+  sukiValues.forEach((v, i) => {
+    if (v === 0) return;
+    const x = pad.l + cw * i / (labels.length - 1);
+    const barH = (v / sukiMax) * ch;
+    ctx.fillStyle = 'rgba(0,212,255,0.25)';
+    ctx.fillRect(x - barW / 2, pad.t + ch - barH, barW, barH);
+  });
+
+  // Follower line fill
   ctx.beginPath();
   values.forEach((v, i) => { const x = pad.l + cw * i / (values.length - 1); const y = pad.t + ch * (1 - (v - min) / range); i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); });
   ctx.lineTo(pad.l + cw, pad.t + ch); ctx.lineTo(pad.l, pad.t + ch); ctx.closePath();
   const grad = ctx.createLinearGradient(0, pad.t, 0, pad.t + ch);
   grad.addColorStop(0, 'rgba(253,121,168,0.25)'); grad.addColorStop(1, 'rgba(253,121,168,0.02)');
   ctx.fillStyle = grad; ctx.fill();
+
+  // Follower line
   ctx.beginPath();
   values.forEach((v, i) => { const x = pad.l + cw * i / (values.length - 1); const y = pad.t + ch * (1 - (v - min) / range); i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); });
   ctx.strokeStyle = PINK; ctx.lineWidth = 2.5; ctx.lineJoin = 'round'; ctx.stroke();
+
+  // End dot
   const lx = pad.l + cw; const ly = pad.t + ch * (1 - (values[values.length - 1] - min) / range);
   ctx.beginPath(); ctx.arc(lx, ly, 4, 0, Math.PI * 2); ctx.fillStyle = PINK; ctx.fill();
 }
@@ -3367,6 +3411,21 @@ function updateFansRenderData() {
   }
 }
 
+// Suki timing multiplier based on hours since article publication
+function getSukiMultiplier(likedAt, noteKey) {
+  // Find published_at for this article
+  const art = latestSnapshot.find(a => a.key === noteKey);
+  if (!art || !art.published_at || !likedAt) return 1;
+  const pubTime = new Date(art.published_at);
+  const likeTime = new Date(likedAt);
+  const diffHours = (likeTime - pubTime) / (1000 * 60 * 60);
+  if (diffHours < 0) return 1;
+  if (diffHours <= 1) return 3;
+  if (diffHours <= 6) return 2;
+  if (diffHours <= 24) return 1.5;
+  return 1;
+}
+
 function renderSukiRanking() {
   const el = document.getElementById('sukiRankingContent');
   if (likesData.length === 0) { el.innerHTML = '<div class="no-data">likes.csv データなし</div>'; return; }
@@ -3386,7 +3445,7 @@ function renderSukiRanking() {
     totalByUser[uid] = (totalByUser[uid] || 0) + 1;
   });
 
-  // Count by user in period
+  // Count by user in period (with timing multiplier)
   const userMap = {};
   periodLikes.forEach(l => {
     const uid = l.like_user_id;
@@ -3396,14 +3455,16 @@ function renderSukiRanking() {
         name: l.like_username || l.like_user_urlname || uid,
         urlname: l.like_user_urlname || '',
         count: 0,
+        score: 0,
         totalCount: totalByUser[uid] || 0,
         followerCount: parseInt(l.follower_count) || 0,
       };
     }
     userMap[uid].count++;
+    userMap[uid].score += getSukiMultiplier(l.liked_at, l.note_key);
   });
 
-  const ranked = Object.values(userMap).sort((a, b) => b.count - a.count || b.totalCount - a.totalCount).slice(0, 20);
+  const ranked = Object.values(userMap).sort((a, b) => b.score - a.score || b.totalCount - a.totalCount).slice(0, 20);
 
   if (ranked.length === 0) {
     el.innerHTML = `<div class="no-data">この期間のスキデータなし（${range.start}〜${range.end}）</div>`;
@@ -3424,6 +3485,7 @@ function renderSukiRanking() {
         <div>${u.count}スキ</div>
         <div>${u.followerCount.toLocaleString()} followers</div>
       </div>
+      <div style="font-family:var(--font-mono);font-size:20px;font-weight:700;color:var(--accent-pink);white-space:nowrap;min-width:70px;text-align:right">${Math.round(u.score * 2)}<span style="font-size:10px;font-weight:400">pt</span></div>
     </div>`;
   }
 
@@ -3457,12 +3519,13 @@ function openSukiScreenshot() {
   periodLikes.forEach(l => {
     const uid = l.like_user_id;
     if (!userMap[uid]) {
-      userMap[uid] = { uid, name: l.like_username || l.like_user_urlname || uid, urlname: l.like_user_urlname || '', count: 0, totalCount: totalByUser[uid] || 0, followerCount: parseInt(l.follower_count) || 0 };
+      userMap[uid] = { uid, name: l.like_username || l.like_user_urlname || uid, urlname: l.like_user_urlname || '', count: 0, score: 0, totalCount: totalByUser[uid] || 0, followerCount: parseInt(l.follower_count) || 0 };
     }
     userMap[uid].count++;
+    userMap[uid].score += getSukiMultiplier(l.liked_at, l.note_key);
   });
 
-  const ranked = Object.values(userMap).sort((a, b) => b.count - a.count || b.totalCount - a.totalCount).slice(0, 10);
+  const ranked = Object.values(userMap).sort((a, b) => b.score - a.score || b.totalCount - a.totalCount).slice(0, 10);
 
   // Check if #1 was also #1 in previous period
   const prevPeriodKey = sukiPeriod === 'week' ? 'lastweek' : sukiPeriod === 'month' ? 'lastmonth' : null;
@@ -3525,15 +3588,15 @@ function openSukiScreenshot() {
         <div style="font-size:13px;font-weight:700;color:#333">${u.name}さん${badge}</div>
         <div style="font-size:10px;color:#fd79a8;margin-top:1px;font-style:italic">${FAN_THANKS[i] || ''}</div>
       </div>
-      <div style="text-align:right">
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:#fd79a8">${u.count}</div>
-        <div style="font-size:9px;color:#999">スキ</div>
+      <div style="text-align:right;flex-shrink:0;min-width:50px">
+        <div style="font-size:9px;color:#999">${u.count}スキ</div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:#fd79a8">${Math.round(u.score * 2)}<span style="font-size:9px;color:#999">pt</span></div>
       </div>
     </div>`;
   }
 
   const html = `
-    <div style="background:#fffbf2;color:#0a0a14;border-radius:20px;padding:28px 24px;font-family:'Noto Sans JP',sans-serif;max-width:720px">
+    <div style="background:#fffbf2;color:#0a0a14;border-radius:20px;padding:28px 24px;font-family:'Noto Sans JP',sans-serif;max-width:860px">
       <div style="text-align:center;margin-bottom:20px">
         <div style="font-size:22px;font-weight:900;color:#333"><span style="font-size:1.5em;font-weight:900;color:#6c5ce7">い</span>つもスキしてくれる人</div>
         <div style="font-size:12px;color:#999;margin-top:4px">${periodLabels[sukiPeriod] || ''} ${getDayLabel(range.start)}〜${getDayLabel(range.end)}</div>
