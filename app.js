@@ -671,7 +671,7 @@ function renderActivityTab() {
     <div class="weekly-section-title">今週のスキしてくれた人 <span style="font-size:12px;color:var(--text-muted);font-weight:400">${week.start}〜${week.end}</span></div>
     ${myLikesData.length > 0 ? '<div style="margin-bottom:8px"><label style="font-family:var(--font-mono);font-size:11px;color:var(--text-muted);cursor:pointer;display:flex;align-items:center;gap:4px"><input type="checkbox" id="filterUnreturned" onchange="toggleUnreturnedFilter()" style="margin:0">未スキ返しのみ</label></div>' : ''}
     <div class="weekly-people-tabs">
-      ${buildPeopleTabButtons(peopleStats)}
+      ${buildPeopleTabButtons(peopleStats, week)}
     </div>
     <div class="weekly-people-content" data-tab="new">${buildWeeklyPeopleHTML(peopleStats, 'new', week)}</div>
     <div class="weekly-people-content" data-tab="return" style="display:none">${buildWeeklyPeopleHTML(peopleStats, 'return', week)}</div>
@@ -1142,14 +1142,14 @@ function getMyLikedUrlnames() {
   return set;
 }
 
-function personCardHTML(person) {
+function personCardHTML(person, week) {
   const profileUrl = person.urlname ? `https://note.com/${person.urlname}` : '#';
-  const myLiked = getMyLikedUrlnames();
-  const returned = person.urlname && myLiked.has(person.urlname);
   const avatarClass = 'weekly-person-avatar' + (person.category === 'regular' ? ' avatar-regular' : '');
-  const statusHTML = myLikesData.length > 0
-    ? `<div style="font-size:11px;margin-top:2px">${returned ? '<span style="color:var(--accent-green)">✅ スキ返し済</span>' : '<span style="color:var(--accent-amber)">❌ 未スキ返し</span>'}</div>`
-    : '';
+  let statusHTML = '';
+  if (myLikesData.length > 0 && person.urlname && week) {
+    const returned = getMyReturnCount(person, week) > 0;
+    statusHTML = `<div style="font-size:11px;margin-top:2px">${returned ? '<span style="color:var(--accent-green)">✅ スキ返し済</span>' : '<span style="color:var(--accent-amber)">❌ 未スキ返し</span>'}</div>`;
+  }
   return `
     <div class="weekly-person">
       <img class="${avatarClass}" data-urlname="${person.urlname}" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='36' height='36'%3E%3Crect fill='%23333' width='36' height='36' rx='18'/%3E%3C/svg%3E" alt="">
@@ -1167,19 +1167,26 @@ function personCardHTML(person) {
 
 function toggleUnreturnedFilter() {
   const checked = document.getElementById('filterUnreturned').checked;
-  const myLiked = getMyLikedUrlnames();
   document.querySelectorAll('.weekly-person').forEach(el => {
     if (!checked) {
       el.style.display = '';
       return;
     }
-    const urlname = el.querySelector('.weekly-person-avatar')?.dataset?.urlname || '';
-    el.style.display = (urlname && myLiked.has(urlname)) ? 'none' : '';
+    const hasComplete = el.querySelector('.weekly-person-stats')?.innerHTML.includes('✅');
+    el.style.display = hasComplete ? 'none' : '';
   });
 }
 
-function buildPeopleTabButtons(stats) {
-  const myLiked = myLikesData.length > 0 ? getMyLikedUrlnames() : null;
+function getMyReturnCount(person, week) {
+  if (!person.urlname || !week || myLikesData.length === 0) return 0;
+  return myLikesData.filter(l =>
+    l.author_urlname === person.urlname &&
+    (l.liked_at || '').slice(0, 10) >= week.start &&
+    (l.liked_at || '').slice(0, 10) <= week.end
+  ).length;
+}
+
+function buildPeopleTabButtons(stats, week) {
   const tabs = [
     { id: 'new', label: '新規', list: stats.newList, active: true },
     { id: 'return', label: '復帰', list: stats.returnList, active: false },
@@ -1188,8 +1195,8 @@ function buildPeopleTabButtons(stats) {
   ];
   return tabs.map(t => {
     let count;
-    if (myLiked) {
-      const returned = t.list.filter(p => p.urlname && myLiked.has(p.urlname)).length;
+    if (myLikesData.length > 0 && week) {
+      const returned = t.list.filter(p => getMyReturnCount(p, week) > 0).length;
       count = `${returned}/${t.list.length}`;
     } else {
       count = `${t.list.length}`;
@@ -1202,7 +1209,7 @@ function buildWeeklyPeopleHTML(stats, mode, week) {
   const listMap = { new: stats.newList, return: stats.returnList, regular: stats.regList, occasional: stats.occasionalList };
   const emptyMap = { new: '今週の新規スキなし', return: '復帰なし', regular: '常連なし', occasional: '該当なし' };
   const list = (listMap[mode] || []).slice(0, 15);
-  return list.length > 0 ? list.map(p => personCardHTML(p)).join('') : `<div style="color:var(--text-muted);font-size:13px;padding:8px 0">${emptyMap[mode] || '該当なし'}</div>`;
+  return list.length > 0 ? list.map(p => personCardHTML(p, week)).join('') : `<div style="color:var(--text-muted);font-size:13px;padding:8px 0">${emptyMap[mode] || '該当なし'}</div>`;
 }
 
 function buildWeeklyAtRiskHTML(stats) {
