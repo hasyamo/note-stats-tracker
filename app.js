@@ -51,6 +51,9 @@ function getTodayJST() {
   return formatDate(jst);
 }
 
+// ===== Excluded Articles (not part of ohayo-kanojo) =====
+const EXCLUDED_KEYS = ['nba6e79f62183'];
+
 // ===== Character Constants =====
 const DAYS_JA = ['月','火','水','木','金','土','日'];
 const CHIBI_FILES = ['mon','tue','wed','thu','fri','sat','sun'];
@@ -161,25 +164,27 @@ function parseCSV(text) {
 
 // ===== Data Processing =====
 function processData(rows) {
-  articlesData = rows.map(r => ({
-    date: r.date,
-    note_id: r.note_id,
-    key: r.key,
-    title: r.title || '',
-    published_at: r.published_at || '',
-    age_days: parseInt(r.age_days) || 0,
-    read_count: parseInt(r.read_count) || 0,
-    like_count: parseInt(r.like_count) || 0,
-    comment_count: parseInt(r.comment_count) || 0,
-    category: categoryMap[r.key] || '?',
-  }));
+  articlesData = rows
+    .filter(r => !EXCLUDED_KEYS.includes(r.key))
+    .map(r => ({
+      date: r.date,
+      note_id: r.note_id,
+      key: r.key,
+      title: r.title || '',
+      published_at: r.published_at || '',
+      age_days: parseInt(r.age_days) || 0,
+      read_count: parseInt(r.read_count) || 0,
+      like_count: parseInt(r.like_count) || 0,
+      comment_count: parseInt(r.comment_count) || 0,
+      category: categoryMap[r.key] || '?',
+    }));
 
   // Get unique dates sorted
   const dates = [...new Set(articlesData.map(a => a.date))].sort();
 
   // Latest snapshot (most recent date)
   const latestDate = dates[dates.length - 1];
-  latestSnapshot = articlesData.filter(a => a.date === latestDate);
+  latestSnapshot = articlesData.filter(a => a.date === latestDate && !EXCLUDED_KEYS.includes(a.key));
 
   // Daily summary from each date
   dailySummary = dates.map(d => {
@@ -380,7 +385,7 @@ function updateHeader(dates) {
     .filter(d => d)
     .sort()[0];
   if (firstPub) {
-    const days = Math.floor((parseDate(dates[dates.length - 1]) - parseDate(firstPub)) / 86400000);
+    const days = Math.floor((parseDate(dates[dates.length - 1]) - parseDate(firstPub)) / 86400000) + 1;
     document.getElementById('daysSinceStart').textContent = days;
   }
   // Navigator: character of latest data date
