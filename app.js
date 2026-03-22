@@ -3583,7 +3583,7 @@ function openSukiScreenshot() {
           ${runaLine}
         </div>
       </div>` : ''}
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 16px">
+      <div class="screenshot-grid">
         <div>${left.map((u, i) => cardHTML(u, i)).join('')}</div>
         <div>${right.map((u, i) => cardHTML(u, i + 5)).join('')}</div>
       </div>

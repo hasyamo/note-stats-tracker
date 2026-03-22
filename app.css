@@ -1269,6 +1269,12 @@ canvas.trend-row-spark {
   gap: 0 16px;
 }
 
+.screenshot-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 16px;
+}
+
 @media (max-width: 900px) {
   .suki-ranking-grid { grid-template-columns: 1fr; }
 }
@@ -1397,6 +1403,7 @@ canvas.trend-row-spark {
   #tabDeepdive .weekly-container { max-width: 100%; overflow-x: hidden; box-sizing: border-box; width: 100%; }
   #tabDeepdive .weekly-section { overflow: hidden; box-sizing: border-box; max-width: 100%; }
   #tabDeepdive .dd-full { overflow: hidden; max-width: 100%; }
+  .screenshot-grid { grid-template-columns: 1fr !important; }
   .dd-canvas-wrap { overflow-x: auto; }
   .toggle-group { flex-wrap: wrap; }
   .toggle-btn { padding: 3px 8px; font-size: 11px; }
