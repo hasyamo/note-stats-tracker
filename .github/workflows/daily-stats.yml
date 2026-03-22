@@ -2,8 +2,10 @@ name: Note Stats Collection
 
 on:
   schedule:
-    # 朝 7:00 JST = 22:00 UTC前日（likes + my_likesのみ。スキ活の材料）
+    # 朝 7:00 JST = 22:00 UTC前日（スキ活の材料）
     - cron: '0 22 * * *'
+    # 午前 11:00 JST = 2:00 UTC（スキ活フィードバック。note 9:30更新後）
+    - cron: '0 2 * * *'
     # 昼 16:30 JST = 7:30 UTC（note 16:00更新後。6h判定）
     - cron: '30 7 * * *'
     # 夜 22:30 JST = 13:30 UTC（メイン集計）
@@ -26,9 +28,7 @@ jobs:
         with:
           python-version: '3.12'
 
-      # 朝(22:00 UTC)はlikes系のみ、昼・夜はstatsも取得
       - name: Fetch note stats
-        if: github.event.schedule != '0 22 * * *'
         env:
           NOTE_COOKIE: ${{ secrets.NOTE_COOKIE }}
           NOTE_USERNAME: ${{ secrets.NOTE_USERNAME }}
