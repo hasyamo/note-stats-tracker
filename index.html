@@ -6,7 +6,7 @@
 <title>祈るな、設計しろ。</title>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
 <link rel="icon" id="favicon" type="image/png" href="images/favicon/eyes-mon.png">
-<link rel="stylesheet" href="app.css?v=1.3.0">
+<link rel="stylesheet" href="app.css?v=1.4.0">
 </head>
 <body>
 
@@ -77,6 +77,7 @@
     <button class="tab-bar-btn" data-tab="activity">Activity</button>
     <button class="tab-bar-btn" data-tab="weekly">Weekly</button>
     <button class="tab-bar-btn" data-tab="deepdive">Deep Dive</button>
+    <button class="tab-bar-btn" data-tab="ranking">Ranking</button>
   </div>
 
   <!-- Daily Tab -->
@@ -123,6 +124,15 @@
     </div>
   </div><!-- /tabDeepdive -->
 
+  <!-- Ranking Tab -->
+  <div class="tab-content" id="tabRanking">
+    <div class="weekly-container">
+      <div class="weekly-header-text">早くスキした人が、勝ち。</div>
+      <div style="font-size:12px;color:var(--accent-amber);margin-top:4px;margin-bottom:12px">記事の公開から早くスキしてくれた人ほど、ポイントが高くなります。</div>
+      <div id="rankingContent"></div>
+    </div>
+  </div>
+
   <footer class="footer">
     意志じゃなく、設計で。
   </footer>
@@ -142,7 +152,7 @@
   <div class="tooltip-row" id="tooltipBody"></div>
 </div>
 
-<script src="girl-lines.js?v=1.3.0"></script>
-<script src="app.js?v=1.3.0"></script>
+<script src="girl-lines.js?v=1.4.0"></script>
+<script src="app.js?v=1.4.0"></script>
 </body>
 </html>

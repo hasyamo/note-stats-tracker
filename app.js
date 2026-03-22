@@ -408,6 +408,9 @@ function switchTab(tabName) {
   if (tabName === 'deepdive' && latestSnapshot.length > 0) {
     setTimeout(() => { renderDeepDive(); }, 50);
   }
+  if (tabName === 'ranking' && latestSnapshot.length > 0) {
+    setTimeout(() => { renderRankingTab(); }, 50);
+  }
 }
 
 document.querySelectorAll('.tab-bar-btn').forEach(btn => {
@@ -3159,8 +3162,6 @@ function renderDeepDive() {
     _dailyRenderData.resurrectedCount = resurrected.size;
   }
 
-  // Fans: all-article suki & new rankers (before HTML generation so navi line is correct)
-  updateFansRenderData();
 
   let html = '';
 
@@ -3257,24 +3258,6 @@ function renderDeepDive() {
     <div class="decay-legend" id="decayLegend"></div>
   </div></div>`;
 
-  // 6. スキランキング（人） (るな=4) — full width, 2-column cards
-  html += `<div class="dd-full">`;
-  html += weeklyNavi(4, 'fans');
-  html += `<div class="weekly-section">
-    <div class="weekly-section-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap">
-      <span>スキランキング</span>
-      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-      <button class="commentary-copy" onclick="openSukiScreenshot()" style="font-size:11px;padding:3px 10px">スクショ用</button>
-      <div class="toggle-group" id="sukiPeriodToggle">
-        <div class="toggle-btn active" data-period="week">今週</div>
-        <div class="toggle-btn" data-period="lastweek">先週</div>
-        <div class="toggle-btn" data-period="month">今月</div>
-        <div class="toggle-btn" data-period="lastmonth">先月</div>
-      </div></div>
-    </div>
-    <div id="sukiRankingContent"><div class="no-data">読み込み中...</div></div>
-  </div></div>`;
-
   el.innerHTML = html;
 
   // Re-attach event listeners for toggle buttons (since DOM was replaced)
@@ -3294,15 +3277,6 @@ function renderDeepDive() {
       renderRanking();
     });
   });
-  document.querySelectorAll('#sukiPeriodToggle .toggle-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('#sukiPeriodToggle .toggle-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      sukiPeriod = btn.dataset.period;
-      renderSukiRanking();
-    });
-  });
-
   // Trend tab/filter listeners
   document.querySelectorAll('.trend-tab').forEach(tab => {
     tab.addEventListener('click', () => {
@@ -3325,7 +3299,6 @@ function renderDeepDive() {
     renderEtaTrend();
     renderTrendCharts();
     renderDecayChart();
-    renderSukiRanking();
     renderCommentByChar();
     renderLongTailList();
   }, 200);
@@ -3481,11 +3454,12 @@ function renderSukiRanking() {
       <div class="weekly-person-name">
         <a href="${profileUrl}" target="_blank" rel="noopener">${u.name}</a>
       </div>
-      <div class="weekly-person-stats">
+      <div class="weekly-person-stats" style="flex-shrink:0">
         <div>${u.count}スキ</div>
-        <div>${u.followerCount.toLocaleString()} followers</div>
+        <div>${u.followerCount.toLocaleString()}</div>
+        <div>followers</div>
       </div>
-      <div style="font-family:var(--font-mono);font-size:20px;font-weight:700;color:var(--accent-pink);white-space:nowrap;min-width:70px;text-align:right">${Math.round(u.score * 2)}<span style="font-size:10px;font-weight:400">pt</span></div>
+      <div style="font-family:var(--font-mono);font-size:20px;font-weight:700;color:var(--accent-pink);white-space:nowrap;text-align:right;margin-left:4px">${Math.round(u.score * 2)}<span style="font-size:10px;font-weight:400">pt</span></div>
     </div>`;
   }
 
@@ -3623,6 +3597,45 @@ function openSukiScreenshot() {
 
 function closeSukiScreenshot() {
   document.getElementById('sukiScreenshotModal').style.display = 'none';
+}
+
+// ===== Ranking Tab =====
+function renderRankingTab() {
+  const el = document.getElementById('rankingContent');
+  if (!el) return;
+
+  updateFansRenderData();
+
+  let html = '';
+  html += weeklyNavi(4, 'fans');
+  html += `<div class="weekly-section">
+    <div class="weekly-section-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap">
+      <span>スキランキング</span>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <button class="commentary-copy" onclick="openSukiScreenshot()" style="font-size:11px;padding:3px 10px">スクショ用</button>
+      <div class="toggle-group" id="sukiPeriodToggle">
+        <div class="toggle-btn active" data-period="week">今週</div>
+        <div class="toggle-btn" data-period="lastweek">先週</div>
+        <div class="toggle-btn" data-period="month">今月</div>
+        <div class="toggle-btn" data-period="lastmonth">先月</div>
+      </div></div>
+    </div>
+    <div id="sukiRankingContent"><div class="no-data">読み込み中...</div></div>
+  </div>`;
+
+  el.innerHTML = html;
+
+  // Attach period toggle listeners
+  document.querySelectorAll('#sukiPeriodToggle .toggle-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#sukiPeriodToggle .toggle-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      sukiPeriod = btn.dataset.period;
+      renderSukiRanking();
+    });
+  });
+
+  setTimeout(() => { renderSukiRanking(); }, 200);
 }
 
 // ===== 7. Comment count by character (day of week) =====
