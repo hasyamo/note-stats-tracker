@@ -3541,13 +3541,21 @@ function openSukiScreenshot() {
   let runaLine = '';
   if (ranked.length > 0) {
     const top1 = ranked[0];
-    const cat = (_dailyRenderData.rankUserCategory || {})[top1.uid] || '';
-    if (prevTop1Uid && top1.uid === prevTop1Uid) {
+    const top1Score = Math.round(top1.score * 2);
+    const tiedCount = ranked.filter(u => Math.round(u.score * 2) === top1Score).length;
+    if (tiedCount >= 2) {
+      runaLine = `今週は${tiedCount}人が同率1位！みんなありがとー！`;
+    } else if (prevTop1Uid && top1.uid === prevTop1Uid) {
       runaLine = `${top1.name}さん、2週連続1位！もう殿堂入りだね！ありがとー！`;
-    } else if (cat === 'new') {
-      runaLine = `${top1.name}さん、初めての1位だよ！嬉しいね！これからもよろしくね！`;
     } else {
-      runaLine = `${top1.name}さんが${top1.count}回もスキしてくれたよ！いつもありがとね！`;
+      const cat = (_dailyRenderData.rankUserCategory || {})[top1.uid] || '';
+      if (cat === 'new') {
+        runaLine = `${top1.name}さん、初めての1位だよ！嬉しいね！これからもよろしくね！`;
+      } else {
+        runaLine = top1.count >= 2
+          ? `${top1.name}さんが${top1.count}回もスキしてくれたよ！いつもありがとね！`
+          : `${top1.name}さんがスキしてくれたよ！いつもありがとね！`;
+      }
     }
   }
 
