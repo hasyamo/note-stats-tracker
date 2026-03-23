@@ -3786,16 +3786,17 @@ function escHtml(s) {
 
 // ===== Load from repo (GitHub Pages) =====
 async function loadFromRepo() {
+  const cacheBust = '?t=' + Date.now();
   try {
     // Load articles.csv
-    const res = await fetch('./data/articles.csv');
+    const res = await fetch('./data/articles.csv' + cacheBust);
     if (res.ok) {
       const text = await res.text();
       const rows = parseCSV(text);
       if (rows.length > 0) {
         // Load article_categories.csv
         try {
-          const catRes = await fetch('./data/article_categories.csv');
+          const catRes = await fetch('./data/article_categories.csv' + cacheBust);
           if (catRes.ok) {
             const catText = await catRes.text();
             const catRows = parseCSV(catText);
@@ -3810,7 +3811,7 @@ async function loadFromRepo() {
 
         // Load daily_summary.csv
         try {
-          const sumRes = await fetch('./data/daily_summary.csv');
+          const sumRes = await fetch('./data/daily_summary.csv' + cacheBust);
           if (sumRes.ok) {
             const sumText = await sumRes.text();
             const sumRows = parseCSV(sumText);
@@ -3827,7 +3828,7 @@ async function loadFromRepo() {
 
         // Load likes.csv
         try {
-          const likesRes = await fetch('./data/likes.csv');
+          const likesRes = await fetch('./data/likes.csv' + cacheBust);
           if (likesRes.ok) {
             const likesText = await likesRes.text();
             likesData = parseCSV(likesText);
@@ -3836,7 +3837,7 @@ async function loadFromRepo() {
 
         // Load my_likes.csv
         try {
-          const mlRes = await fetch('./data/my_likes.csv');
+          const mlRes = await fetch('./data/my_likes.csv' + cacheBust);
           if (mlRes.ok) {
             const mlText = await mlRes.text();
             myLikesData = parseCSV(mlText);
