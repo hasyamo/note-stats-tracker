@@ -3312,10 +3312,25 @@ function renderDeepDive() {
 // ===== 6. Suki Ranking (people, period selectable) =====
 let sukiPeriod = 'week';
 
+// Get the "ranking date" for a liked_at timestamp (5:00 JST boundary)
+function getRankingDate(likedAt) {
+  if (!likedAt) return '';
+  const d = new Date(likedAt);
+  // Convert to JST hours
+  const jstHours = (d.getUTCHours() + 9) % 24;
+  const dateStr = likedAt.slice(0, 10);
+  if (jstHours < 5) {
+    // Before 5:00 JST → count as previous day
+    const prev = new Date(parseDate(dateStr));
+    prev.setDate(prev.getDate() - 1);
+    return formatDate(prev);
+  }
+  return dateStr;
+}
+
 function getSukiPeriodRange(period) {
   const src = summaryData.length > 0 ? summaryData : dailySummary;
   const dataDate = src.length > 0 ? src[src.length - 1].date : getTodayJST();
-  const today = parseDate(dataDate);
 
   if (period === 'week') {
     const mon = getMondayOf(dataDate);
@@ -3352,7 +3367,7 @@ function updateFansRenderData() {
 
   const range = getSukiPeriodRange(sukiPeriod);
   const periodLikes = likesData.filter(l => {
-    const d = (l.liked_at || '').slice(0, 10);
+    const d = getRankingDate(l.liked_at);
     return d >= range.start && d <= range.end;
   });
 
@@ -3412,11 +3427,10 @@ function renderSukiRanking() {
 
   const range = getSukiPeriodRange(sukiPeriod);
   const periodLikes = likesData.filter(l => {
-    const d = (l.liked_at || '').slice(0, 10);
+    const d = getRankingDate(l.liked_at);
     return d >= range.start && d <= range.end;
   });
 
-  // Total likes per user (all time) for tiebreaker
   const totalByUser = {};
   likesData.forEach(l => {
     const uid = l.like_user_id;
@@ -3442,7 +3456,7 @@ function renderSukiRanking() {
     userMap[uid].score += getSukiMultiplier(l.liked_at, l.note_key);
   });
 
-  const ranked = Object.values(userMap).sort((a, b) => b.score - a.score || b.totalCount - a.totalCount).slice(0, 20);
+  const ranked = Object.values(userMap).sort((a, b) => b.score - a.score).slice(0, 20);
 
   if (ranked.length === 0) {
     el.innerHTML = `<div class="no-data">この期間のスキデータなし（${range.start}〜${range.end}）</div>`;
@@ -3453,8 +3467,10 @@ function renderSukiRanking() {
     const profileUrl = u.urlname ? `https://note.com/${u.urlname}` : '#';
     const cat = (_dailyRenderData.rankUserCategory || {})[u.uid] || '';
     const avatarClass = 'weekly-person-avatar' + (cat === 'regular' ? ' avatar-regular' : '');
+    const rank = i === 0 ? 1 : (Math.round(u.score * 2) === Math.round(ranked[i - 1].score * 2) ? ranked[i - 1]._rank : i + 1);
+    u._rank = rank;
     return `<div class="weekly-person">
-      <div style="font-family:var(--font-mono);font-size:18px;font-weight:700;color:var(--accent-pink);min-width:28px;text-align:center">${i + 1}</div>
+      <div style="font-family:var(--font-mono);font-size:18px;font-weight:700;color:var(--accent-pink);min-width:28px;text-align:center">${rank}</div>
       <img class="${avatarClass}" data-urlname="${u.urlname}" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='36' height='36'%3E%3Crect fill='%23333' width='36' height='36' rx='18'/%3E%3C/svg%3E" alt="">
       <div class="weekly-person-name">
         <a href="${profileUrl}" target="_blank" rel="noopener">${u.name}</a>
@@ -3487,7 +3503,7 @@ function renderSukiRanking() {
 function openSukiScreenshot() {
   const range = getSukiPeriodRange(sukiPeriod);
   const periodLikes = likesData.filter(l => {
-    const d = (l.liked_at || '').slice(0, 10);
+    const d = getRankingDate(l.liked_at);
     return d >= range.start && d <= range.end;
   });
 
@@ -3504,7 +3520,7 @@ function openSukiScreenshot() {
     userMap[uid].score += getSukiMultiplier(l.liked_at, l.note_key);
   });
 
-  const ranked = Object.values(userMap).sort((a, b) => b.score - a.score || b.totalCount - a.totalCount).slice(0, 10);
+  const ranked = Object.values(userMap).sort((a, b) => b.score - a.score).slice(0, 10);
 
   // Check if #1 was also #1 in previous period
   const prevPeriodKey = sukiPeriod === 'week' ? 'lastweek' : sukiPeriod === 'month' ? 'lastmonth' : null;
@@ -3553,15 +3569,17 @@ function openSukiScreenshot() {
   const right = ranked.slice(5, 10);
 
   function cardHTML(u, i) {
+    const rank = i === 0 ? 1 : (Math.round(u.score * 2) === Math.round(ranked[i - 1].score * 2) ? ranked[i - 1]._rank : i + 1);
+    u._rank = rank;
     const cat = (_dailyRenderData.rankUserCategory || {})[u.uid] || '';
-    const avatarStyle = i === 0
+    const avatarStyle = rank === 1
       ? 'border:3px solid #d4af37;box-shadow:0 2px 8px rgba(0,0,0,0.15);'
       : 'border:2px solid #6c5ce7;box-shadow:0 2px 8px rgba(0,0,0,0.15);';
     const badge = cat === 'regular' ? '<span style="font-size:9px;background:#d4af37;color:#fff;padding:1px 5px;border-radius:8px;margin-left:4px;font-weight:400">常連</span>'
       : cat === 'new' ? '<span style="font-size:9px;background:#6c5ce7;color:#fff;padding:1px 5px;border-radius:8px;margin-left:4px;font-weight:400">New</span>'
       : '';
     return `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#fff;border-radius:12px;border:1px solid rgba(108,92,231,0.12);margin-bottom:6px;${i === 0 ? 'box-shadow:0 4px 16px rgba(108,92,231,0.1);' : ''}">
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:24px;color:${i === 0 ? '#d4af37' : i === 1 ? '#c0c0c0' : i === 2 ? '#cd7f32' : '#ccc'};min-width:28px;text-align:center">${i + 1}</div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:24px;color:${rank <= 1 ? '#d4af37' : rank <= 2 ? '#c0c0c0' : rank <= 3 ? '#cd7f32' : '#ccc'};min-width:28px;text-align:center">${rank}</div>
       <img class="weekly-person-avatar" data-urlname="${u.urlname}" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='36' height='36'%3E%3Crect fill='%23eee' width='36' height='36' rx='18'/%3E%3C/svg%3E" alt="" style="border-radius:50%;${avatarStyle}">
       <div style="flex:1;min-width:0">
         <div style="font-size:13px;font-weight:700;color:#333">${u.name}さん${badge}</div>
