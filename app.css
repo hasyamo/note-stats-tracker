@@ -662,7 +662,7 @@ canvas.trend-row-spark {
 .tab-bar {
   display: flex;
   gap: 0;
-  background: var(--bg-secondary);
+  background: #1e2040;
   border-bottom: 1px solid var(--border);
   padding: 0 40px;
 }
