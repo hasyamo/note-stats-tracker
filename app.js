@@ -3528,12 +3528,16 @@ function openSukiScreenshot() {
   if (prevPeriodKey) {
     const prevRange = getSukiPeriodRange(prevPeriodKey);
     const prevPeriodLikes = likesData.filter(l => {
-      const d = (l.liked_at || '').slice(0, 10);
+      const d = getRankingDate(l.liked_at);
       return d >= prevRange.start && d <= prevRange.end;
     });
-    const prevCounts = {};
-    prevPeriodLikes.forEach(l => { prevCounts[l.like_user_id] = (prevCounts[l.like_user_id] || 0) + 1; });
-    const prevRanked = Object.entries(prevCounts).sort((a, b) => b[1] - a[1]);
+    const prevScores = {};
+    prevPeriodLikes.forEach(l => {
+      const uid = l.like_user_id;
+      if (!prevScores[uid]) prevScores[uid] = 0;
+      prevScores[uid] += getSukiMultiplier(l.liked_at, l.note_key);
+    });
+    const prevRanked = Object.entries(prevScores).sort((a, b) => b[1] - a[1]);
     if (prevRanked.length > 0) prevTop1Uid = prevRanked[0][0];
   }
 
