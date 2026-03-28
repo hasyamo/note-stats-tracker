@@ -33,9 +33,9 @@ LIKES_HEADER = ["note_key", "like_user_id", "like_username",
                 "like_user_urlname", "liked_at", "follower_count"]
 
 
-def fetch_likes_api(note_key, start=0, size=LIKES_API_SIZE):
+def fetch_likes_api(note_key, page=1, per=LIKES_API_SIZE):
     """1ページ分のスキデータを取得。エラー時はNone"""
-    url = f"{BASE_URL}/api/v3/notes/{note_key}/likes?start={start}&size={size}"
+    url = f"{BASE_URL}/api/v3/notes/{note_key}/likes?page={page}&per={per}"
     req = Request(url)
     req.add_header("Accept", "application/json, text/plain, */*")
     req.add_header("User-Agent", "Mozilla/5.0")
@@ -45,7 +45,7 @@ def fetch_likes_api(note_key, start=0, size=LIKES_API_SIZE):
         with urlopen(req, timeout=30) as res:
             return json.loads(res.read().decode("utf-8"))
     except HTTPError as e:
-        print(f"  ⚠ API HTTPエラー ({note_key}, start={start}): {e.code}")
+        print(f"  ⚠ API HTTPエラー ({note_key}, page={page}): {e.code}")
         return None
     except URLError as e:
         print(f"  ⚠ API通信エラー ({note_key}): {e.reason}")
@@ -54,24 +54,19 @@ def fetch_likes_api(note_key, start=0, size=LIKES_API_SIZE):
 
 def fetch_all_likes_for_article(note_key):
     """1記事の全スキを取得（ページネーション対応）
-    注意: APIのis_last_pageは信頼できない（常にFalseを返す場合がある）
-    like_countベースの終了判定 + 重複検知で安全に停止する
+    page/perパラメータを使用（start/sizeは2ページ目以降で同じデータを返すバグあり）
     """
     all_likes = []
     seen_ids = set()
-    start = 0
-    total_count = None
+    page = 1
 
     while True:
-        resp = fetch_likes_api(note_key, start)
+        resp = fetch_likes_api(note_key, page)
         if resp is None:
             break
 
         data = resp.get("data", {})
         likes = data.get("likes", [])
-
-        if total_count is None:
-            total_count = data.get("extra_fields", {}).get("like_count", 0)
 
         if not likes:
             break
@@ -93,11 +88,10 @@ def fetch_all_likes_for_article(note_key):
                 "follower_count": user.get("follower_count", 0),
             })
 
-        # 終了条件: 全件取得済み or ページ内で新規なし（APIが同じデータを返している）
-        if len(all_likes) >= total_count or new_in_page == 0:
+        if new_in_page == 0:
             break
 
-        start += LIKES_API_SIZE
+        page += 1
         time.sleep(SLEEP_BETWEEN_PAGES)
 
     if total_count is not None and len(all_likes) < total_count:
