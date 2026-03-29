@@ -94,9 +94,6 @@ def fetch_all_likes_for_article(note_key):
         page += 1
         time.sleep(SLEEP_BETWEEN_PAGES)
 
-    if total_count is not None and len(all_likes) < total_count:
-        print(f"    ⚠ {note_key}: {total_count}件中{len(all_likes)}件のみ取得（APIページネーション制限）")
-
     return all_likes
 
 
