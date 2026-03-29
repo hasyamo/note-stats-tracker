@@ -164,24 +164,38 @@ def load_articles_csv():
     return articles_by_date, sorted_dates
 
 
+LIKES_PREV = os.path.join(DATA_DIR, "likes_prev.json")
+
+
 def find_articles_with_new_likes(articles_by_date, sorted_dates):
-    """最新2日分を比較し、スキ増加した記事のnote_keyリストを返す"""
-    if len(sorted_dates) < 2:
-        return None  # ベースラインモードにフォールバック
-
+    """前回保存したスナップショットと比較し、スキ増加した記事のnote_keyリストを返す"""
     latest = sorted_dates[-1]
-    previous = sorted_dates[-2]
-
     latest_data = articles_by_date[latest]
-    previous_data = articles_by_date[previous]
+
+    # Load previous snapshot
+    prev_data = {}
+    if os.path.exists(LIKES_PREV):
+        with open(LIKES_PREV, "r", encoding="utf-8") as f:
+            prev_data = json.load(f)
+
+    if not prev_data:
+        return None  # ベースラインモードにフォールバック
 
     changed = []
     for note_key, like_count in latest_data.items():
-        prev_count = previous_data.get(note_key, 0)
+        prev_count = prev_data.get(note_key, 0)
         if like_count > prev_count:
             changed.append(note_key)
 
     return changed
+
+
+def save_likes_prev(articles_by_date, sorted_dates):
+    """現在のlike_countをスナップショットとして保存"""
+    latest = sorted_dates[-1]
+    latest_data = articles_by_date[latest]
+    with open(LIKES_PREV, "w", encoding="utf-8") as f:
+        json.dump(latest_data, f)
 
 
 def append_likes_csv(new_likes):
@@ -247,6 +261,7 @@ def main():
 
             os.makedirs(DATA_DIR, exist_ok=True)
             append_likes_csv(all_new_likes)
+            save_likes_prev(articles_by_date, sorted_dates)
             print(f"\n完了: {len(all_new_likes)}件のスキを記録")
 
         else:
@@ -260,6 +275,7 @@ def main():
 
             if not changed:
                 print("\nスキ数の変化なし")
+                save_likes_prev(articles_by_date, sorted_dates)
                 return
 
             print(f"\nスキ増加: {len(changed)}記事を取得")
@@ -281,6 +297,7 @@ def main():
 
             os.makedirs(DATA_DIR, exist_ok=True)
             append_likes_csv(all_new_likes)
+            save_likes_prev(articles_by_date, sorted_dates)
             print(f"\n完了: 新規{len(all_new_likes)}件のスキを記録")
 
     except Exception as e:
