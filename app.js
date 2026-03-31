@@ -3349,6 +3349,7 @@ function getSukiPeriodRange(period) {
   }
   if (period === 'lastmonth') {
     const d = parseDate(dataDate);
+    d.setDate(1);
     d.setMonth(d.getMonth() - 1);
     const start = formatDate(d).slice(0, 7) + '-01';
     const endD = parseDate(dataDate.slice(0, 7) + '-01');
