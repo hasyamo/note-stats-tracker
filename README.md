@@ -1,5 +1,10 @@
 # note-stats-tracker
 
+> ⚠️ **2026-07-12 廃止・アーカイブ化。** データはD1（`CF/note-data-collector`）へ移行済み。
+> 公開ダッシュボードは hasyamo-site の `/stats` 観測室（https://hasyamo-site.hasyamo.workers.dev/stats/）で稼働中。
+> **このリポジトリの CSV・GitHub Actions はもう更新しない。** カテゴリ登録の手順は
+> `hasyamo-vault/70_projects/note/schedule/README.md` の「D1へのカテゴリ登録」を参照。
+
 noteの記事データを毎日自動で蓄積するツール。
 
 ## 仕組み

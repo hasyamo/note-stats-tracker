@@ -1,15 +1,8 @@
 name: Note Stats Collection
 
+# 2026-07-12 廃止: データはD1（CF/note-data-collector）へ移行済み。
+# 自動収集（cronトリガー）は停止。手動実行のみ残す（緊急時の参照用）。
 on:
-  schedule:
-    # 朝 7:00 JST = 22:00 UTC前日（スキ活の材料）
-    - cron: '0 22 * * *'
-    # 午前 11:00 JST = 2:00 UTC（スキ活フィードバック。note 9:30更新後）
-    - cron: '0 2 * * *'
-    # 昼 16:30 JST = 7:30 UTC（note 16:00更新後。6h判定）
-    - cron: '30 7 * * *'
-    # 夜 22:30 JST = 13:30 UTC（メイン集計）
-    - cron: '30 13 * * *'
   workflow_dispatch: # 手動実行用
 
 permissions:
